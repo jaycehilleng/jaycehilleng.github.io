@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jayce Hill — Principal AI Security Architect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:       #0D1117;
+      --ink-mid:   #3A3F4B;
+      --ink-soft:  #6B7280;
+      --rule:      #E2E5EA;
+      --page:      #F8F9FB;
+      --white:     #FFFFFF;
+      --signal:    #0F52BA;
+      --signal-lt: #E8EFFA;
+      --signal-glow: rgba(15, 82, 186, 0.12);
+      --mono:      'JetBrains Mono', monospace;
+      --serif:     'DM Serif Display', serif;
+      --sans:      'Inter', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 clamp(1.5rem, 5vw, 4rem);
+      height: 64px;
+      background: rgba(248, 249, 251, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .nav-name {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--signal);
+      text-transform: uppercase;
+    }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--ink-mid);
+      text-decoration: none;
+      letter-spacing: 0.03em;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--signal); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 100px clamp(1.5rem, 5vw, 4rem) 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 70% 40%, var(--signal-glow), transparent),
+        radial-gradient(ellipse 40% 60% at 20% 80%, rgba(15,82,186,0.05), transparent);
+      pointer-events: none;
+    }
+    .hero-inner { max-width: 820px; position: relative; }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: block; width: 32px; height: 1px;
+      background: var(--signal);
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      line-height: 1.06;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+    }
+    .hero-title-accent {
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--signal);
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      font-weight: 300;
+      color: var(--ink-mid);
+      max-width: 560px;
+      margin: 1.5rem 0 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-mission {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--signal);
+      background: var(--signal-lt);
+      border: 1px solid rgba(15,82,186,0.2);
+      border-radius: 3px;
+      padding: 0.6rem 1rem;
+      margin-bottom: 2.5rem;
+      line-height: 1.5;
+      max-width: 560px;
+    }
+
+    .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.85rem; font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .btn-primary {
+      background: var(--signal);
+      color: var(--white);
+      border: 1px solid var(--signal);
+    }
+    .btn-primary:hover { background: #0a3f94; border-color: #0a3f94; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink-mid);
+      border: 1px solid var(--rule);
+    }
+    .btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+
+    .hero-stats {
+      display: flex; gap: 3rem; flex-wrap: wrap;
+      margin-top: 4rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--rule);
+    }
+    .stat-num {
+      font-family: var(--serif);
+      font-size: 2.4rem;
+      color: var(--ink);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.3rem;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 100px clamp(1.5rem, 5vw, 4rem);
+    }
+    .section-inner { max-width: 900px; margin: 0 auto; }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 1.5rem;
+    }
+    .section-body {
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--ink-mid);
+      line-height: 1.8;
+      max-width: 680px;
+    }
+
+    /* ── ABOUT ── */
+    #about { background: var(--white); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      margin-top: 3rem;
+      align-items: start;
+    }
+    .about-block h3 {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .about-block p {
+      font-size: 0.92rem;
+      font-weight: 300;
+      color: var(--ink-mid);
+      line-height: 1.8;
+      margin-bottom: 0.8rem;
+    }
+
+    /* ── WORK ── */
+    #work { background: var(--page); }
+    .work-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+    .work-card {
+      background: var(--white);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 2rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .work-card:hover {
+      border-color: var(--signal);
+      box-shadow: 0 4px 24px var(--signal-glow);
+    }
+    .work-card-tag {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--signal);
+      background: var(--signal-lt);
+      border-radius: 2px;
+      padding: 0.2rem 0.5rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    .work-card h3 {
+      font-family: var(--serif);
+      font-size: 1.3rem;
+      color: var(--ink);
+      margin-bottom: 0.75rem;
+      line-height: 1.3;
+    }
+    .work-card p {
+      font-size: 0.875rem;
+      font-weight: 300;
+      color: var(--ink-mid);
+      line-height: 1.7;
+    }
+    .work-card-metric {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--signal);
+    }
+
+    /* ── CLIENTS ── */
+    #clients { background: var(--white); }
+    .clients-intro {
+      font-size: 0.92rem;
+      font-weight: 300;
+      color: var(--ink-soft);
+      margin-bottom: 2.5rem;
+      font-style: italic;
+    }
+    .client-grid {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .client-chip {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--ink-mid);
+      background: var(--page);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      padding: 0.5rem 1rem;
+      transition: all 0.2s;
+    }
+    .client-chip:hover {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: var(--signal-lt);
+    }
+
+    /* ── EXPERTISE ── */
+    #expertise { background: var(--page); }
+    .expertise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 3rem;
+    }
+    .expertise-cell {
+      background: var(--white);
+      padding: 1.75rem;
+    }
+    .expertise-cell h4 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.01em;
+    }
+    .expertise-cell p {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: var(--ink-soft);
+      line-height: 1.6;
+    }
+
+    /* ── CONTACT ── */
+    #contact {
+      background: var(--ink);
+      color: var(--white);
+    }
+    #contact .section-title { color: var(--white); }
+    #contact .section-label { color: rgba(255,255,255,0.4); }
+    .contact-sub {
+      font-size: 1rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.55);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+    }
+    .contact-links { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn-contact {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .btn-contact:hover {
+      border-color: rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.05);
+    }
+    .btn-contact-primary {
+      background: var(--signal);
+      border-color: var(--signal);
+    }
+    .btn-contact-primary:hover { background: #0a3f94; border-color: #0a3f94; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 1.5rem clamp(1.5rem, 5vw, 4rem);
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    footer p {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 680px) {
+      .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .hero-stats { gap: 2rem; }
+      .nav-links { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-name">Jayce Hill</span>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#work">Work</a></li>
+      <li><a href="#clients">Clients</a></li>
+      <li><a href="#expertise">Expertise</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="home">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Principal AI Security Architect</div>
+      <h1>Jayce<br><span class="hero-title-accent">Hill</span></h1>
+      <p class="hero-sub">
+        One of a small number of practitioners who has built, secured, and governed
+        agentic AI systems in production — at Fortune 100 scale, in regulated industries,
+        with real consequences.
+      </p>
+      <div class="hero-mission">
+        // Security should act as an accelerator, not a blocker.
+      </div>
+      <div class="hero-cta">
+        <a href="#work" class="btn btn-primary">See the work</a>
+        <a href="#contact" class="btn btn-ghost">Get in touch</a>
+      </div>
+      <div class="hero-stats">
+        <div>
+          <div class="stat-num">20+</div>
+          <div class="stat-label">Years in security</div>
+        </div>
+        <div>
+          <div class="stat-num">~20</div>
+          <div class="stat-label">Fortune 100 engagements</div>
+        </div>
+        <div>
+          <div class="stat-num">34</div>
+          <div class="stat-label">Agents secured (HVE-Core)</div>
+        </div>
+        <div>
+          <div class="stat-num">~1hr</div>
+          <div class="stat-label">Security plan iteration (vs. weeks)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="section-inner">
+      <div class="section-label">About</div>
+      <h2 class="section-title">I help organizations deploy<br>AI at scale — safely.</h2>
+      <div class="about-grid">
+        <div class="about-block">
+          <h3>What I build</h3>
+          <p>I created and deployed CRISP — a proprietary threat modeling framework operating as an MCP (Model Context Protocol) server — across ~20 Fortune 100 engagements. CRISP scans customer architectures, generates data attribute tables, and produces comprehensive security plans aligned to OWASP, Microsoft standards, and industry frameworks. Identified by ISE leadership as a top-priority accelerator.</p>
+          <p>I served as Security Lead for HVE-Core — ISE's agentic engineering platform with 34 autonomous agents executing Research-Plan-Implement workflows via GitHub Copilot. I defined security boundaries for agent tool-use and established governance patterns for autonomous code generation.</p>
+        </div>
+        <div class="about-block">
+          <h3>How I operate</h3>
+          <p>Forward deployed, embedded directly in customer engineering sprints using a discuss/build/upskill model — not auditing, but building alongside partner teams and transferring durable security capability.</p>
+          <p>At Halliburton/Project Helios, I designed an AI-assisted continuous security validation workflow combining CRISP MCP and HVE-Core — reducing the security planning cycle from weeks to approximately one hour per iteration while maintaining human-in-the-loop oversight for regulatory interpretation and risk prioritization.</p>
+          <h3 style="margin-top:1.5rem">Background</h3>
+          <p>20+ years across Microsoft ISE, GDIT, Oracle National Security Group, and Booz Allen Hamilton. Previously held TS/SCI CI-Poly Full Scope Lifestyle clearance. M.Eng. Systems Engineering (GWU), M.S. Cybersecurity (Georgia Tech), B.S. ECE (Michigan State). INFOSEC Hall of Fame, 2021.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORK -->
+  <section id="work">
+    <div class="section-inner">
+      <div class="section-label">Selected Work</div>
+      <h2 class="section-title">Agentic AI security<br>in production.</h2>
+      <div class="work-grid">
+
+        <div class="work-card">
+          <span class="work-card-tag">Threat Modeling · MCP</span>
+          <h3>CRISP</h3>
+          <p>Proprietary security architecture framework operating as a Model Context Protocol server. Scans customer architectures, generates data attribute tables, and produces comprehensive, continuously updated security plans. Built and deployed across ~20 Fortune 100 engagements.</p>
+          <div class="work-card-metric">→ ISE top-priority accelerator · Energy, FS, Automotive, Capital Markets</div>
+        </div>
+
+        <div class="work-card">
+          <span class="work-card-tag">Agentic Security · HVE</span>
+          <h3>HVE-Core Security Lead</h3>
+          <p>Security Lead for ISE's Hypervelocity Engineering platform — 34 autonomous agents executing RPI workflows via GitHub Copilot. Defined agent tool-use boundaries, governed autonomous code generation, and led deployment workshops at KPMG and LSEG.</p>
+          <div class="work-card-metric">→ 220+ engineering artifacts · Customer workshops: KPMG, LSEG</div>
+        </div>
+
+        <div class="work-card">
+          <span class="work-card-tag">AI Governance · Regulated Industry</span>
+          <h3>Halliburton / Project Helios</h3>
+          <p>Designed an AI-assisted continuous security validation workflow for a multi-tenant AI platform processing proprietary oil & gas data across Azure. Combined CRISP MCP and HVE-Core to regenerate and validate security plans as architecture evolved weekly.</p>
+          <div class="work-card-metric">→ Weeks → ~1 hour per security plan iteration</div>
+        </div>
+
+        <div class="work-card">
+          <span class="work-card-tag">Supply Chain · DevSecOps</span>
+          <h3>CI/CD & Supply Chain Hardening</h3>
+          <p>Hardened CRISP MCP and ISE accelerator platforms with CodeQL SAST, workflow token permissions, GitHub Actions SHA pinning, Trivy container scanning, CycloneDX SBOM generation and signing, and base image digest pinning. Aligned to OpenSSF Scorecard.</p>
+          <div class="work-card-metric">→ OpenSSF Scorecard aligned · SBOM · Artifact signing</div>
+        </div>
+
+        <div class="work-card">
+          <span class="work-card-tag">IaC Security · Zero Trust</span>
+          <h3>Secure-by-Default Infrastructure</h3>
+          <p>Built a hardened Bicep library spanning 11 Azure services — AKS, SQL, Cosmos, Key Vault, Redis, AI Foundry, Storage, VNet, NSG, PIM, Guardrails — with Zero Trust defaults enforced at the IaC layer: private networking, managed identity, least-privilege role assignments.</p>
+          <div class="work-card-metric">→ 11 Azure services · Zero Trust by default</div>
+        </div>
+
+        <div class="work-card">
+          <span class="work-card-tag">Workshop · Customer Delivery</span>
+          <h3>KPMG & LSEG Workshops</h3>
+          <p>Co-led HVE security workshops with senior leadership at KPMG (New Jersey) and LSEG (London). Grounded discussions in real use cases for integrating security into AI delivery workflows. Presented at the LSEG HVE Hackathon Science Fair.</p>
+          <div class="work-card-metric">→ Senior leadership sessions · On-site London & New Jersey</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section id="clients">
+    <div class="section-inner">
+      <div class="section-label">Clients</div>
+      <h2 class="section-title">Fortune 100 & strategic accounts.</h2>
+      <p class="clients-intro">Security architecture and governance delivered across energy, financial services, automotive, capital markets, and public sector.</p>
+      <div class="client-grid">
+        <span class="client-chip">Bank of America</span>
+        <span class="client-chip">Fidelity Investments</span>
+        <span class="client-chip">LSEG</span>
+        <span class="client-chip">KPMG</span>
+        <span class="client-chip">FIS</span>
+        <span class="client-chip">Halliburton</span>
+        <span class="client-chip">Dow Chemical</span>
+        <span class="client-chip">General Motors</span>
+        <span class="client-chip">U.S. Federal & IC Agencies</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERTISE -->
+  <section id="expertise">
+    <div class="section-inner">
+      <div class="section-label">Expertise</div>
+      <h2 class="section-title">What I bring to the table.</h2>
+      <div class="expertise-grid">
+        <div class="expertise-cell">
+          <h4>Agentic AI Security</h4>
+          <p>MCP architectures, autonomous workflow governance, tool-use boundaries, human-in-the-loop validation for production AI systems.</p>
+        </div>
+        <div class="expertise-cell">
+          <h4>AI/ML Security</h4>
+          <p>LLM pipelines, RAG architectures, inference infrastructure, prompt injection, data exfiltration, model integrity in regulated environments.</p>
+        </div>
+        <div class="expertise-cell">
+          <h4>Cloud Security Architecture</h4>
+          <p>Azure, AWS, OCI. Zero Trust design, identity governance, Entra ID, PIM, conditional access across hybrid and multi-cloud environments.</p>
+        </div>
+        <div class="expertise-cell">
+          <h4>DevSecOps & Supply Chain</h4>
+          <p>CI/CD hardening, SBOM, SLSA, Sigstore, SHA pinning, SAST/DAST, container scanning, OpenSSF Scorecard alignment.</p>
+        </div>
+        <div class="expertise-cell">
+          <h4>Governance & Compliance</h4>
+          <p>RMF, NIST 800-53, FedRAMP, regulatory gap analysis with full traceability from regulation to engineering control to artifact.</p>
+        </div>
+        <div class="expertise-cell">
+          <h4>Executive Delivery</h4>
+          <p>CISO-to-engineering alignment, customer-facing architecture leadership, reusable security frameworks that outlast the engagement.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="section-inner">
+      <div class="section-label">Contact</div>
+      <h2 class="section-title">Let's talk about<br>securing your AI.</h2>
+      <p class="contact-sub">
+        Open to Principal, Director, and Head of AI Security roles. Available for advisory engagements, workshops, and architecture reviews.
+      </p>
+      <div class="contact-links">
+        <a href="mailto:jayce@hillsecadvisors.com" class="btn-contact btn-contact-primary">jayce@hillsecadvisors.com</a>
+        <a href="https://linkedin.com/in/jaycehilleng" target="_blank" rel="noopener" class="btn-contact">LinkedIn</a>
+        <a href="tel:2024094788" class="btn-contact">(202) 409-4788</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2026 Jayce Hill</p>
+    <p>Washington, DC · jayce@hillsecadvisors.com</p>
+  </footer>
+
+</body>
+</html>
