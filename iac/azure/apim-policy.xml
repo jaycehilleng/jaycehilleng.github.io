@@ -1,0 +1,52 @@
+<!-- 
+  Azure API Management Inbound Policy: Zero-Trust MCP Inspection Routing
+  Intercepts tool call payloads and routes them out-of-band to SecureMCPProxy.
+-->
+<policies>
+    <inbound>
+        <base />
+        <!-- 1. Validate incoming JSON-RPC structural headers -->
+        <check-header name="Content-Type" failed-check-httpcode="400" failed-check-error-message="Invalid Content-Type. Expected application/json" ignore-case="true">
+            <value>application/json</value>
+        </check-header>
+
+        <!-- 2. Extract payload for out-of-band security inspection -->
+        <send-request mode="new" response-variable-name="inspectionResult" timeout="10" ignore-error="false">
+            <set-url>https://{{mcp-proxy-endpoint}}/v1/mcp/inspect</set-url>
+            <set-method>POST</set-method>
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+            <set-body>@(context.Request.Body.As<string>(preserveBody: true))</set-body>
+        </send-request>
+
+        <!-- 3. Enforce policy decision based on inspection response -->
+        <choose>
+            <when condition="@(((IResponse)context.Variables["inspectionResult"]).StatusCode != 200)">
+                <return-response>
+                    <set-status code="403" reason="Forbidden" />
+                    <set-header name="Content-Type" exists-action="override">
+                        <value>application/json</value>
+                    </set-header>
+                    <set-body>{
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32600,
+                            "message": "Security Policy Violation: Untrusted payload rejected by Zero-Trust Inspection Proxy."
+                        },
+                        "id": null
+                    }</set-body>
+                </return-response>
+            </when>
+        </choose>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
