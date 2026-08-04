@@ -1,0 +1,30 @@
+// Query 1: Detect Suspicious Out-of-Band XPIA Injection Events
+// Severity: CRITICAL
+// Alert Threshold: > 0 events in 5 minutes
+MCP_SecurityEvent_CL
+| where TimeGenerated >= ago(24h)
+| where EventType == "XPIA_Detection" or RuleTriggered contains "XPIA"
+| project TimeGenerated, CorrelationId, SubjectId, ClientIP, RuleTriggered, Severity, RawPayloadSnippet
+| order by TimeGenerated desc;
+
+// Query 2: Non-Human Identity PoP Token Validation Failures
+// Severity: WARNING
+// Identifies expired TTL, missing 'cnf' claim, or scope mismatches
+MCP_SecurityEvent_CL
+| where TimeGenerated >= ago(24h)
+| where EventType == "Token_Validation_Failure"
+| summarize FailureCount = count(), UniqueAgents = dcount(SubjectId) by RuleTriggered, bin(TimeGenerated, 1h)
+| render timechart;
+
+// Query 3: Real-Time Audit Summary Dashboard
+// Provides aggregated health metrics across the Zero-Trust MCP Gateway
+MCP_SecurityEvent_CL
+| where TimeGenerated >= ago(7d)
+| summarize 
+    TotalRequests = count(),
+    XPIA_Blocks = countif(EventType == "XPIA_Detection"),
+    AuthFailures = countif(EventType == "Token_Validation_Failure"),
+    Successes = countif(EventType == "Access_Granted")
+    by bin(TimeGenerated, 1d)
+| extend BlockRatePercentage = round((todouble(XPIA_Blocks) / TotalRequests) * 100, 2)
+| order by TimeGenerated desc;
