@@ -517,6 +517,98 @@
           <h3>KPMG & LSEG Workshops</h3>
           <p>Co-led HVE security workshops with senior leadership at KPMG (New Jersey) and LSEG (London). Grounded discussions in real use cases for integrating security into AI delivery workflows. Presented at the LSEG HVE Hackathon Science Fair.</p>
           <div class="work-card-metric">→ Senior leadership sessions · On-site London & New Jersey</div>
+          <!-- Enterprise MCP Zero-Trust Gateway Showcase -->
+      <style>
+        .mcp-showcase-container {
+          margin-top: 4rem;
+          padding-top: 3rem;
+          border-top: 1px solid var(--rule);
+        }
+        .mcp-header {
+          text-align: center;
+          margin-bottom: 2.5rem;
+        }
+        .mcp-header h3 {
+          font-family: var(--serif);
+          font-size: 1.8rem;
+          color: var(--ink);
+          margin-bottom: 0.5rem;
+        }
+        .mcp-header p {
+          font-size: 0.95rem;
+          color: var(--ink-soft);
+        }
+        .mcp-badge-bar {
+          margin-top: 0.75rem;
+        }
+        .mcp-links {
+          list-style: none;
+          padding: 0;
+          margin-top: 1rem;
+        }
+        .mcp-links li {
+          margin-bottom: 0.4rem;
+        }
+        .mcp-links a {
+          font-family: var(--mono);
+          font-size: 0.8rem;
+          color: var(--signal);
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .mcp-links a:hover {
+          text-decoration: underline;
+        }
+      </style>
+
+      <div class="mcp-showcase-container">
+        <div class="mcp-header">
+          <h3>Enterprise MCP Zero-Trust Gateway & NHI Architecture</h3>
+          <p>Autonomous AI Agent Governance, Proof-of-Possession Identity, and Continuous Security Observability</p>
+          <div class="mcp-badge-bar">
+            <a href="https://github.com/jaycehilleng/jaycehilleng.github.io/actions/workflows/ci.yml" target="_blank" rel="noopener">
+              <img src="https://github.com/jaycehilleng/jaycehilleng.github.io/actions/workflows/ci.yml/badge.svg" alt="CI Security Test Suite Status">
+            </a>
+          </div>
+        </div>
+
+        <div class="work-grid">
+          <!-- Artifact 1 -->
+          <div class="work-card">
+            <span class="work-card-tag">Artifact 1 · Proxy & Runtime</span>
+            <h3>Control Plane & Out-of-Band Proxy</h3>
+            <p>Dual-trust security architecture enforcing out-of-band JSON-RPC payload inspection, schema validation, and XPIA prompt injection defenses for LLM tool invocation.</p>
+            <ul class="mcp-links">
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/architecture-spec.md" target="_blank" rel="noopener">→ Architecture Spec ↗</a></li>
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/threat-matrix.md" target="_blank" rel="noopener">→ Threat Matrix & STRIDE ↗</a></li>
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/iac/azure/main.bicep" target="_blank" rel="noopener">→ Azure APIM Bicep IaC ↗</a></li>
+            </ul>
+          </div>
+
+          <!-- Artifact 2 -->
+          <div class="work-card">
+            <span class="work-card-tag">Artifact 2 · NHI Identity</span>
+            <h3>Non-Human Identity Governance</h3>
+            <p>Entra Agent ID integration featuring cryptographic Proof-of-Possession (PoP) token validation, mTLS binding, and ephemeral 15-minute credential lifecycles.</p>
+            <ul class="mcp-links">
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/identity-architecture.md" target="_blank" rel="noopener">→ Identity Spec ↗</a></li>
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/src/identity/token_validator.py" target="_blank" rel="noopener">→ PoP Token Validator Engine ↗</a></li>
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/iac/azure/entra-agent-identity.bicep" target="_blank" rel="noopener">→ Entra Agent Bicep IaC ↗</a></li>
+            </ul>
+          </div>
+
+          <!-- Artifact 3 -->
+          <div class="work-card">
+            <span class="work-card-tag">Artifact 3 · Audit & SIEM</span>
+            <h3>Continuous Audit & Observability</h3>
+            <p>Centralized security telemetry pipeline using structured MCP JSON schemas and KQL threat detection packs for Azure Log Analytics & Sentinel.</p>
+            <ul class="mcp-links">
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/audit-observability.md" target="_blank" rel="noopener">→ Telemetry & Audit Spec ↗</a></li>
+              <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/iac/azure/queries.kql" target="_blank" rel="noopener">→ KQL Detection Queries ↗</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>
