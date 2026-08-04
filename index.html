@@ -283,6 +283,48 @@
       color: var(--signal);
     }
 
+    /* ── MCP SHOWCASE EXTRA STYLES ── */
+    .mcp-showcase-container {
+      margin-top: 4rem;
+      padding-top: 3rem;
+      border-top: 1px solid var(--rule);
+    }
+    .mcp-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .mcp-header h3 {
+      font-family: var(--serif);
+      font-size: 1.8rem;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+    .mcp-header p {
+      font-size: 0.95rem;
+      color: var(--ink-soft);
+    }
+    .mcp-badge-bar {
+      margin-top: 0.75rem;
+    }
+    .mcp-links {
+      list-style: none;
+      padding: 0;
+      margin-top: 1rem;
+    }
+    .mcp-links li {
+      margin-bottom: 0.4rem;
+    }
+    .mcp-links a {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--signal);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .mcp-links a:hover {
+      text-decoration: underline;
+    }
+
     /* ── CLIENTS ── */
     #clients { background: var(--card); }
     .clients-intro {
@@ -481,6 +523,7 @@
     <div class="section-inner">
       <div class="section-label">Selected Work</div>
       <h2 class="section-title">Agentic AI security<br>in production.</h2>
+      
       <div class="work-grid">
         <div class="work-card">
           <span class="work-card-tag">Threat Modeling · MCP</span>
@@ -517,50 +560,10 @@
           <h3>KPMG & LSEG Workshops</h3>
           <p>Co-led HVE security workshops with senior leadership at KPMG (New Jersey) and LSEG (London). Grounded discussions in real use cases for integrating security into AI delivery workflows. Presented at the LSEG HVE Hackathon Science Fair.</p>
           <div class="work-card-metric">→ Senior leadership sessions · On-site London & New Jersey</div>
-          <!-- Enterprise MCP Zero-Trust Gateway Showcase -->
-      <style>
-        .mcp-showcase-container {
-          margin-top: 4rem;
-          padding-top: 3rem;
-          border-top: 1px solid var(--rule);
-        }
-        .mcp-header {
-          text-align: center;
-          margin-bottom: 2.5rem;
-        }
-        .mcp-header h3 {
-          font-family: var(--serif);
-          font-size: 1.8rem;
-          color: var(--ink);
-          margin-bottom: 0.5rem;
-        }
-        .mcp-header p {
-          font-size: 0.95rem;
-          color: var(--ink-soft);
-        }
-        .mcp-badge-bar {
-          margin-top: 0.75rem;
-        }
-        .mcp-links {
-          list-style: none;
-          padding: 0;
-          margin-top: 1rem;
-        }
-        .mcp-links li {
-          margin-bottom: 0.4rem;
-        }
-        .mcp-links a {
-          font-family: var(--mono);
-          font-size: 0.8rem;
-          color: var(--signal);
-          text-decoration: none;
-          font-weight: 500;
-        }
-        .mcp-links a:hover {
-          text-decoration: underline;
-        }
-      </style>
+        </div>
+      </div> <!-- End of .work-grid -->
 
+      <!-- Enterprise MCP Zero-Trust Gateway Showcase Block -->
       <div class="mcp-showcase-container">
         <div class="mcp-header">
           <h3>Enterprise MCP Zero-Trust Gateway & NHI Architecture</h3>
@@ -609,9 +612,8 @@
           </div>
         </div>
       </div>
-        </div>
-      </div>
-    </div>
+
+    </div> <!-- End of .section-inner -->
   </section>
 
   <!-- CLIENTS -->
