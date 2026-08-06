@@ -28,6 +28,8 @@ This workspace evaluates, audits, and extends enterprise reference architectures
 ## 🛠️ Repository Organization
 
 ```text
+
 .
 ├── docs/               --> Architectural specs, security audits, and technical writeups
-└── labs/               --> Production-grade code, infrastructure-as-code, and security prototypes
+├── iac/                --> Infrastructure-as-code (Azure Bicep, APIM policies)
+└── src/                --> MCP security proxy validator, identity token validation, & Python sources
