@@ -1,5 +1,5 @@
 """
-Unit and Integration Tests for SecureMCPProxy
+"""Unit Tests for Secure MCP Proxy..."""
 Validates payload inspection, indirect prompt injection (XPIA) detection, and schema compliance.
 """
 
