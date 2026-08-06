@@ -20,7 +20,7 @@ This workspace evaluates, audits, and extends enterprise reference architectures
 
 | Project / Module | Focus Area | Tech Stack | Status |
 | :--- | :--- | :--- | :--- |
-| [MCP Security Proxy & Sandbox](./labs/mcp-security-proxy/) | Out-of-band payload inspection & runtime sandboxing for MCP tool calls. | Python, FastAPI, Docker, OPA, Azure APIM | **Active Build** |
+| [MCP Security Proxy & Sandbox](./labs/mcp-security-proxy/) | Out-of-band payload inspection & runtime sandboxing for MCP tool calls. | Python (FastAPI, Docker, OPA — planned), Azure APIM |
 | [AI Gateway Audit Spec](./docs/architecture/mcp-zero-trust-sandbox.md) | Technical critique and zero-trust extension design for central AI control planes. | Azure Bicep, APIM Policies, MCP | **Complete** |
 
 ---
