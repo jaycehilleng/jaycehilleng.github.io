@@ -42,8 +42,14 @@ graph TD
     class UED untrusted;
     class TB1,TB2,TB3 boundary;
     class UserEngine,PoP,Proxy,Tools nodeStyle;
+```
 
-    sequenceDiagram
+---
+
+## Control Plane Sequence Diagram
+
+```mermaid
+sequenceDiagram
     autonumber
     actor Agent as Autonomous Agent
     participant Ingress as PoP Token Validator
@@ -68,8 +74,29 @@ graph TD
             Proxy-->>Agent: JSON-RPC Success Result
         end
     end
+```
 
-    STRIDE Threat Model & MitigationsSTRIDE CategorySpecific Agent Threat VectorArchitectural MitigationImplementation ComponentSpoofingCompromised bearer token replayed by malicious agent or rogue workload.Mandate short-lived JWTs bound to ephemeral keys via RFC 7800 cnf (confirmation) claims; enforce strict audience checking.src/identity/token_validator.pyTamperingTool parameters altered via indirect prompt injection (e.g., passing --namespace=kube-system or shell metachars).Recursive regex parameter validation blocking CLI argument switches, null bytes, command substitution, and path traversal.src/mcp_proxy/proxy.py (_validate_arguments)RepudiationUnaudited tool execution by autonomous non-human actors across microservices.Structured JSON audit logging capturing timestamps, tool names, sub/caller_id, status (ALLOWED/BLOCKED), and latency.src/mcp_proxy/proxy.py (_emit_telemetry)Information DisclosureUnauthorized agent accessing privileged identity graph or cluster telemetry.Strict RBAC policy whitelist (ALLOWED_TOOLS) restricting tool execution to validated token roles.src/mcp_proxy/proxy.py (ALLOWED_TOOLS)Denial of ServiceLong-lived token persistence or recursive malformed JSON-RPC payloads exhausting proxy memory.Bounded token TTL enforcement ($\le 900\text{s}$) and deterministic JSON parse recovery returning standard error payloads.token_validator.py & proxy.pyElevation of PrivilegeConfused deputy attack: Low-privilege agent invoking high-privilege tool methods.Multi-tier validation: token scope verification followed by method-level RBAC policy evaluation before tool routing.PoPTokenValidator + SecureMCPProxyTelemetry Schema & SIEM / Observability IngestionAll proxy decisions generate a standardized JSON audit record:JSON{
+---
+
+## STRIDE Threat Model & Mitigations
+
+| STRIDE Category | Specific Agent Threat Vector | Architectural Mitigation | Implementation Component |
+| :--- | :--- | :--- | :--- |
+| **Spoofing** | Compromised bearer token replayed by malicious agent or rogue workload. | Mandate short-lived JWTs bound to ephemeral keys via RFC 7800 `cnf` (confirmation) claims; enforce strict audience checking. | `src/identity/token_validator.py` |
+| **Tampering** | Tool parameters altered via indirect prompt injection (e.g., passing `--namespace=kube-system` or shell metachars). | Recursive regex parameter validation blocking CLI argument switches, null bytes, command substitution, and path traversal. | `src/mcp_proxy/proxy.py` (`_validate_arguments`) |
+| **Repudiation** | Unaudited tool execution by autonomous non-human actors across microservices. | Structured JSON audit logging capturing timestamps, tool names, sub/caller_id, status (`ALLOWED`/`BLOCKED`), and latency. | `src/mcp_proxy/proxy.py` (`_emit_telemetry`) |
+| **Information Disclosure** | Unauthorized agent accessing privileged identity graph or cluster telemetry. | Strict RBAC policy whitelist (`ALLOWED_TOOLS`) restricting tool execution to validated token roles. | `src/mcp_proxy/proxy.py` (`ALLOWED_TOOLS`) |
+| **Denial of Service** | Long-lived token persistence or recursive malformed JSON-RPC payloads exhausting proxy memory. | Bounded token TTL enforcement ($\le 900\text{s}$) and deterministic JSON parse recovery returning standard error payloads. | `token_validator.py` & `proxy.py` |
+| **Elevation of Privilege** | Confused deputy attack: Low-privilege agent invoking high-privilege tool methods. | Multi-tier validation: token scope verification followed by method-level RBAC policy evaluation before tool routing. | `PoPTokenValidator` + `SecureMCPProxy` |
+
+---
+
+## Telemetry Schema & SIEM / Observability Ingestion
+
+All proxy decisions generate a standardized JSON audit record:
+
+```json
+{
   "timestamp": 1787859388.378,
   "event_type": "mcp_security_block",
   "tool_name": "read_telemetry",
@@ -78,3 +105,17 @@ graph TD
   "latency_ms": 0.379,
   "details": "Dangerous parameter pattern detected: 'cluster-1; cat /etc/passwd'"
 }
+```
+
+* **Datadog Integration:** Ingests directly via standard container stdout/stderr log drivers; mapped to Datadog APM trace spans via `caller_id` and `tool_name` facets.
+* **Security Monitoring:** Immediate alerting triggers on anomalous rates of `event_type == "mcp_security_block"`.
+
+---
+
+## Verification & Test Coverage
+
+The test harness evaluates cryptographic identity assertion, token expiration, parameter injection attack vectors, and role-based enforcement across 11 unit assertions:
+
+```bash
+python3 -m unittest discover -s src -p "test_*.py"
+```
