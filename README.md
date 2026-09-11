@@ -3,6 +3,14 @@
 Welcome to my principal-level engineering workspace and public security research lab. This repository houses technical architecture specs, security audits, and hands-on laboratory implementations focused on **Zero-Trust Agent Sandboxing**, **Model Context Protocol (MCP) Governance**, and **Cloud Infrastructure Hardening**.
 
 ---
+### Architecture & Security Governance Highlights
+- **Agentic AI Defense:** Hardened Model Context Protocol (MCP) proxy with recursive parameter sanitization and runtime boundary isolation.
+- **Enterprise IAM & Trust:** RFC 7800 Proof-of-Possession token validation, least-privilege App-to-App (A2A) authorization, and decoupled Policy-Based Access Control (PBAC).
+- **Policy-as-Code (PaC):** Declarative OPA/Rego policy engine (`policies/mcp_tool_policy.rego`) decoupling authorization from execution runtimes.
+- **Threat Modeling & Auditability:** Formal STRIDE threat mitigation matrix, 3-tier Trust Boundary architecture, and SIEM/APM telemetry integration for banking-grade traceability.
+
+---
+
 
 ## 🎯 Active Strategic Focus: Agentic AI Governance
 
