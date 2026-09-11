@@ -119,3 +119,35 @@ The test harness evaluates cryptographic identity assertion, token expiration, p
 ```bash
 python3 -m unittest discover -s src -p "test_*.py"
 ```
+
+---
+
+## Enterprise Auditability, Resiliency & Telemetry
+
+To satisfy Tier-1 financial infrastructure standards (e.g., NIST SP 800-53, FFIEC baselines), `SecureMCPProxy` enforces deterministic traceability across all agentic execution paths.
+
+### 1. Immutable Structured Telemetry
+Every inbound request, validation check, and tool invocation produces a structured JSON audit payload routed to standard output for SIEM (Splunk, Datadog) ingestion:
+
+```json
+{
+  "timestamp": "2026-09-11T20:00:00.000Z",
+  "trace_id": "c7a8e9f2-b431-4821-9e23-7f284e9d0a12",
+  "caller": {
+    "sub": "svc-agent-orchestrator",
+    "tenant_id": "us-east-core-prod",
+    "pop_verified": true
+  },
+  "action": "tools/call",
+  "target_tool": "db_record_update",
+  "policy_decision": {
+    "engine": "OPA/Rego",
+    "allowed": true,
+    "rule": "mcp.authz.is_authorized_tool"
+  },
+  "sanitization": {
+    "parameters_scanned": 4,
+    "injections_detected": 0
+  },
+  "status": "DISPATCHED"
+}
