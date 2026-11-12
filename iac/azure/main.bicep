@@ -8,6 +8,7 @@ param location string = resourceGroup().location
 param environmentName string = 'mcp-sandbox-prod'
 
 @description('Container image for the isolated MCP tool execution sandbox')
+// Placeholder image for infrastructure validation; replace with the SecureMCPProxy / tool server image.
 param containerImage string = 'mcr.microsoft.com/azuredocs/aci-helloworld:latest'
 
 @description('Publisher email for API Management gateway notifications')

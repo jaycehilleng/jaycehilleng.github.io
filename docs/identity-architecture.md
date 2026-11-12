@@ -1,10 +1,12 @@
-# Architectural Spec: Non-Human Identity (NHI) Governance & Proof-of-Possession Tokens
+# Architecture Spec: Non-Human Identity (NHI) Governance & Proof-of-Possession Tokens (Artifact 2)
+
+**Author:** Jayce Hill | Principal AI Security Architect
 
 ## Executive Overview
 
-In autonomous agentic workflows, traditional long-lived API keys and static service principal credentials present severe security risks, including identity hijacking, confused deputy exploits, and excessive agency.
+In autonomous agentic workflows, long-lived API keys and static service-principal secrets create severe risk: identity hijacking, confused-deputy abuse, and excessive agency.
 
-This specification defines a **Dual-Trust Identity Architecture** using **Microsoft Entra Agent IDs** and **Workload Identity Federation**. By enforcing short-lived Proof-of-Possession (PoP) 5Oauth 2.0 tokens bound to specific agent execution sessions, we establish cryptographically verifiable non-human identity (NHI) boundaries for every tool invocation.
+This specification defines a **dual-trust identity architecture** using **Microsoft Entra workload identity** for agents. Agents receive short-lived OAuth 2.0 access tokens bound to a key (RFC 7800 `cnf` claim), and every tool invocation is checked against that identity before it executes. Each control is marked **Implemented** (code and tests in this repo) or **Designed** (specified, not yet built).
 
 ---
 
@@ -14,46 +16,50 @@ This specification defines a **Dual-Trust Identity Architecture** using **Micros
 sequenceDiagram
     autonumber
     participant Agent as Ephemeral ACA Task<br/>(Agent Execution Scope)
-    participant Entra as Microsoft Entra ID<br/>(Agent ID Provider)
-    participant APIM as APIM AI Gateway<br/>(iac/azure/apim-policy)
-    participant Sidecar as PoP Token Validator<br/>(src/identity/token_validator.py)
+    participant Entra as Microsoft Entra ID
+    participant APIM as APIM AI Gateway<br/>(iac/azure/apim-policy.xml)
+    participant Validator as PoP Token Validator<br/>(src/identity/token_validator.py)
     participant Proxy as Zero-Trust MCP Proxy<br/>(src/mcp_proxy/proxy.py)
 
-    Agent->>Entra: 1. Exchange Workload Assertion
-    Entra-->>Agent: 2. Issue Short-Lived PoP Token (TTL <= 15 mins, Bound cnf)
-    Agent->>APIM: 3. Submit MCP Request + Bearer PoP Token
-    APIM->>Sidecar: 4. Forward to Identity Sidecar
-    Note over Sidecar: Validates Token Expiry, Signature,<br/>Audience, & Session Confirmation (cnf) Claim
-    Sidecar->>Proxy: 5. Forward Validated Request
+    Agent->>Entra: 1. Exchange workload identity assertion
+    Entra-->>Agent: 2. Issue short-lived token (TTL <= 15 min, cnf-bound)
+    Agent->>APIM: 3. MCP request + Bearer token
+    APIM->>APIM: 4. validate-jwt (issuer, audience, signature)
+    APIM->>Proxy: 5. Out-of-band inspection with token
+    Proxy->>Validator: 6. Verify signature, expiry, audience, scope, cnf
+    Validator-->>Proxy: 7. Verified claims (or block)
 ```
 
 ---
 
 ## Key Identity Controls
 
-| Control Layer | Implementation Pattern | Security Property |
-| :--- | :--- | :--- |
-|A** Identity Delegation** | Microsoft Entra Agent ID + Workload Identity | Eliminates hardcoded client secrets; authenticates agent tasks via OIDC assertions. |
-|A**Token Binding** | OAuth 2.0 Proof-of-Possession (cnf claim) | Prevents token replay if a Bearer token is intercepted in transit or logged. |
-|**Temporal Scoping** | Max TTL \text{Requires Update} | Constrains token lifespan to the active execution context of the agent task. |
-|A**Least Privilege** | Fine-Grained OAuth Scopes (Tool.Execute.<Name>) | Ensures agents only hold permissions required for the targeted tool invocation. |
+| Control Layer | Implementation Pattern | Security Property | Status |
+| :--- | :--- | :--- | :--- |
+| **Identity Delegation** | Entra workload identity (user-assigned managed identity today; Entra Agent ID registration and federated credential designed) | No client secrets stored in agent containers | **Implemented** (managed identity, `iac/azure/entra-agent-identity.bicep`); **Designed** (Agent ID + federation) |
+| **Signature Verification** | ES256 JWT verification with an explicit algorithm allow-list | Forged, tampered, and unsigned (`alg: none`) tokens rejected | **Implemented** |
+| **Token Binding** | RFC 7800 `cnf` confirmation claim required | Token must be bound to a key | **Implemented** (claim required); **Designed**: per-request DPoP proof (RFC 9449) |
+| **Temporal Scoping** | Max TTL 900 s (15 min), `exp`/`nbf` enforced | Limits a stolen token's useful life | **Implemented** |
+| **Least Privilege** | Required scope per tool call, plus tool-level RBAC in the proxy | Agents only hold what the target tool needs | **Implemented** |
 
 ---
 
 ## Implementation & Token Validation Standards
 
-### 1. Entra Workload Identity Federation
-* Ephemeral tasks in Azure Container Apps authenticate via managed identity OIDC assertions directly to Entra ID.
-*No long-lived secrets or client certificates are stored inside container environments.
+### 1. Entra Workload Identity
+* Agent tasks in Azure Container Apps authenticate with a managed identity; no long-lived secrets or client certificates live in the container.
+* **Designed:** register agents as Entra Agent IDs and add a federated identity credential so tasks exchange OIDC assertions directly.
 
-### 2. Session Confirmation (cnf) Claim Verification
-* Downstream validation sidecar (src/identity/token_validator.py) inspects the JWT cnf (confirmation) claim.
-* Verifies public key binding against client request signatures to prevent man-in-the-middle or intercepted replay attacks.
+### 2. Token Validation (`src/identity/token_validator.py`)
+* Raw JWTs are signature-verified with the configured public key and algorithm allow-list, then checked for audience, expiry, not-before, maximum TTL, scope, and the `cnf` claim.
+* Claims already verified upstream (for example by APIM `validate-jwt`) receive the same claims-level checks.
+* **Designed:** verify a DPoP proof on each request, signed by the key in `cnf`, so an intercepted token cannot be replayed without that private key.
 
 ---
 
-## Threat Mitigation Matrix
+## Threat Mitigation Summary
 
-* **Confused Deputy:** A compromised lower-privilege agent cagnot use its token to invoke higher-tier administrative tools because tokens are explicitly scoped to granular tool identities.
-* **Token Exfiltration / Replay:** Intercepted tokens fail validation at the sidecar if the caller cannot prove possession of the private key bound in the cnf claim.
-*A**Excessive Agency:** Dynamic policy enforcement limits tool execution permissions strictly to the active task context.
+* **Confused Deputy:** a lower-privilege agent cannot invoke higher-tier tools, because each call requires the tool's scope and an allowed role. *(Implemented)*
+* **Token Forgery / Tampering:** tokens not signed by the trusted key, or modified after signing, are rejected. *(Implemented)*
+* **Token Replay:** short TTL limits the replay window today; DPoP proof verification closes it. *(TTL implemented; DPoP designed)*
+* **Excessive Agency:** tool allow-list, scopes, and default-deny Rego policy constrain what any agent can execute. *(Allow-list and scopes implemented; OPA sidecar evaluation designed)*

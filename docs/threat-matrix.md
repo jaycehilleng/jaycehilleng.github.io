@@ -1,50 +1,62 @@
-# Enterprise Threat Matrix: SAIF Alignment & OWASP Top 10 for LLM Applications
+# Enterprise Threat Matrix: OWASP Top 10 for LLM Applications & Google SAIF
 
-**Author:** Jayce Hill | Principal AI Security Architect  
-**Framework Alignment:** Google Secure AI Framework (SAIF), OWASP Top 10 for LLM (2025/2026), NIST AI RMF  
+**Author:** Jayce Hill | Principal AI Security Architect
+**Framework Alignment:** OWASP Top 10 for LLM Applications (2025), Google Secure AI Framework (SAIF), NIST AI RMF
 
 ---
 
 ## Executive Summary
-Deploying autonomous agents and Model Context Protocol (MCP) tool integrations expands the attack surface beyond traditional application security boundaries. Threats such as **Indirect Prompt Injection (XPIA)**, **Data Exfiltration via Tool Misuse**, and **Non-Human Identity Hijacking** require structured threat modeling that maps real-world vectors directly to mitigation controls.
 
-This matrix maps critical LLM vulnerabilities to SAIF risk domains and specifies concrete architectural controls implemented within the **Secure MCP Execution Runtime**.
+Agents that call tools over the Model Context Protocol (MCP) widen the attack surface beyond traditional application security. Indirect prompt injection, tool misuse, and non-human identity abuse need a threat model that maps each vector to a concrete control, and that is honest about which controls exist today.
 
----
+Each mitigation below is marked **Implemented** (code and tests in this repo) or **Designed** (specified in the architecture docs, not yet built).
 
-## SAIF & OWASP Top 10 Threat Mapping
-
-| Threat ID | OWASP Category | Vulnerability Description | SAIF Pillar Alignment | Runtime Mitigation Control |
-| :--- | :--- | :--- | :--- | :--- |
-| **TR-01** | **LLM01: Prompt Injection** | Direct or indirect prompt manipulation altering model intent and bypassing safety instructions. | **Expand Default Defenses** | Out-of-band regex & semantic payload inspection in `SecureMCPProxy`. |
-| **TR-02** | **LLM02: Sensitive Info Disclosure** | System prompts, PII, or internal tool outputs leaked via agent context responses. | **Automate Defenses** | Output sanitization pipeline and strict PII stripping before returning tool outputs. |
-| **TR-03** | **LLM06: Excessive Agency** | Agents granted overly broad tool access, leading to unauthorized actions. | **Incorporate Ecosystem Controls** | Entra Agent ID integration + OPA fine-grained capability matrix (RBAC). |
-| **TR-04** | **LLM07: System Prompt Leakage** | Attackers craft prompts to reveal underlying system instructions or system state. | **Expand Default Defenses** | Strict contextual delimiter enforcement and prompt isolation boundaries. |
-| **TR-05** | **LLM08: Vector & Extension Spoofing** | Compromised MCP tool extensions or poisoned vector embeddings inducing harmful tool calls. | **Secure Ecosystem** | Ephemeral, isolated Azure Container Apps execution sandboxes with read-only filesystems. |
-| **TR-06** | **LLM09: Misconfiguration / NHI Risk** | Over-privileged service principals or static API tokens used for agent identity. | **Adapt Protections** | Short-lived OAuth 2.0 Proof-of-Possession (PoP) tokens bound to agent runtime context. |
+SAIF core elements referenced: **Foundations** (expand strong security foundations to the AI ecosystem), **Detection & Response** (extend detection and response to AI), **Automate** (automate defenses), **Harmonize** (harmonize platform-level controls), **Adapt** (adapt controls and create faster feedback loops), **Contextualize** (contextualize AI system risks in business processes).
 
 ---
 
-## Architectural Control Mapping
+## OWASP / SAIF Threat Mapping
 
-### 1. Indirect Prompt Injection (XPIA) Defense Strategy
-* **Threat Vector:** Untrusted data retrieved from external sources (e.g., database queries or user inputs) contains embedded instruction overrides like `IGNORE PREVIOUS INSTRUCTIONS`.
-* **Control Layer:** The `SecureMCPProxy` acts as a deterministic barrier, evaluating all incoming `tools/call` JSON-RPC arguments before passing the payload to execution handlers.
-* **Verification:** Unit tests within `src/mcp_proxy/proxy.py` validate immediate rejection (`status: REJECTED`) upon detecting signature patterns.
-
-### 2. Non-Human Identity (NHI) Governance
-* **Threat Vector:** Compromised agent tokens allow malicious actors to move laterally across enterprise cloud infrastructure.
-* **Control Layer:** Every agent identity is assigned an **Entra Agent ID** with access tokens restricted to a maximum TTL of 15 minutes. Downstream tools receive micro-tokens constrained strictly to read-only capabilities.
-
-### 3. Containerized Runtime Sandboxing
-* **Threat Vector:** Malicious code execution or remote code execution (RCE) via arbitrary tool invocation.
-* **Control Layer:** Tool execution runs inside ephemeral Azure Container Apps (ACA) sandboxes equipped with read-only root filesystems, scale-to-zero lifecycle policies, and restricted outbound network rules.
+| ID | OWASP LLM (2025) | Threat in an MCP Deployment | SAIF Element | Mitigation | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **TR-01** | LLM01: Prompt Injection | Instructions embedded in retrieved content steer the agent into a harmful tool call with attacker-chosen arguments. | Foundations | Model-independent gate in `SecureMCPProxy`: tool allow-list, per-tool RBAC, recursive argument sanitization (command chaining, path traversal, CWE-88). | **Implemented** |
+| **TR-02** | LLM01: Prompt Injection (indirect, via tool output) | Tool responses carry injected instructions back into the agent's context. | Detection & Response | Inspect tool responses before re-entry into agent context. | **Designed** |
+| **TR-03** | LLM02: Sensitive Information Disclosure | Tool output leaks secrets or PII to the agent or user. | Harmonize | Output redaction on the response path. | **Designed** |
+| **TR-04** | LLM03: Supply Chain | A compromised or impersonated MCP tool server is invoked. | Foundations | Explicit tool allow-list today; signed tool manifests and pinned server identities designed. CodeQL runs on this repo in CI. | **Implemented** (allow-list) / **Designed** (signing) |
+| **TR-05** | LLM05: Improper Output Handling | Downstream systems execute model-generated arguments without validation. | Foundations | Argument sanitization implemented; per-tool JSON Schema validation designed. | **Implemented** / **Designed** |
+| **TR-06** | LLM06: Excessive Agency | Agents hold broader tool access than the task requires. | Harmonize | Required scope per call, tool-level RBAC, default-deny Rego policy (authored; sidecar evaluation designed). | **Implemented** / **Designed** |
+| **TR-07** | LLM10: Unbounded Consumption | Recursive or high-volume tool calls exhaust resources. | Adapt | Short token TTL implemented; APIM rate limiting and quotas designed. | **Designed** |
+| **TR-08** | Non-human identity abuse (beyond the LLM Top 10) | Stolen, forged, or over-privileged agent credentials used for lateral movement. | Foundations | ES256 signature verification (rejects forged and `alg: none` tokens), 15-minute max TTL, audience and scope checks, `cnf` key-binding claim required. DPoP proof verification designed. | **Implemented** / **Designed** |
 
 ---
 
-## Threat Matrix Verification & Audit Trail
+## Architectural Control Notes
 
-All control implementations documented in this matrix are backed by reproducible code artifacts within this repository:
-1. **Architecture Spec & Sequence Flow:** `docs/architecture-spec.md`
-2. **Security Proxy Implementation:** `src/mcp_proxy/proxy.py`
-3. **Infrastructure Declaration:** `iac/azure/main.bicep`
+### 1. Prompt Injection Defense
+* **Threat vector:** untrusted data (documents, tickets, web pages) contains instruction overrides such as `IGNORE PREVIOUS INSTRUCTIONS` that steer tool calls.
+* **Control (implemented):** the decision to execute is made outside the model. `SecureMCPProxy` checks identity, tool permission, and arguments on every `tools/call`, whatever the model was told.
+* **Verification:** `src/mcp_proxy/test_proxy.py` and `src/mcp_proxy/test_integration.py` assert that injection payloads and unauthorized calls return a JSON-RPC error (`-32000`) and are logged as `BLOCKED`.
+* **Limit:** pattern-based sanitization is one layer, not a complete prompt-injection defense; response-side inspection and per-tool schemas are designed next.
+
+### 2. Non-Human Identity Governance
+* **Threat vector:** a compromised agent token is used to move laterally.
+* **Control (implemented):** tokens must be signed by the trusted key, carry the right audience and scope, include a `cnf` binding, and live no longer than 15 minutes.
+* **Control (designed):** Entra Agent ID registration with a federated credential, and per-request DPoP proofs.
+
+### 3. Tool Execution Isolation
+* **Threat vector:** a malicious tool call achieves code execution in the tool runtime.
+* **Control (implemented in IaC):** the tool container app has private ingress only (reachable through APIM) and scales to zero when idle (`iac/azure/main.bicep`).
+* **Control (designed):** kernel-isolated execution (gVisor / Wasm), read-only filesystems, and restricted egress.
+
+---
+
+## Verification
+
+Code-backed controls can be verified by running the test suite:
+
+```bash
+pip install -r requirements.txt
+PYTHONPATH=. python -m pytest src -v
+```
+
+Designed controls are specified in [`architecture-spec.md`](./architecture-spec.md) and [`identity-architecture.md`](./identity-architecture.md).
