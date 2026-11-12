@@ -28,7 +28,7 @@ class SecureMCPProxy:
         re.compile(r"[\x00\r\n]"),                  # Null bytes & CRLF injection
         re.compile(r"[;&|`$><]"),                   # Command chaining / shell execution
         re.compile(r"\.\./|\.\.\\"),                # Path traversal
-        re.compile(r"^-{1,2}[a-zA-Z0-9]"),          # Leading dash argument flags (CVE-2026-61459)
+        re.compile(r"^-{1,2}[a-zA-Z0-9]"),          # Leading dash argument flags (CWE-88 argument injection)
     ]
 
     ALLOWED_TOOLS = {
@@ -68,7 +68,7 @@ class SecureMCPProxy:
 
     def handle_request(self, raw_json_rpc: str, auth_token: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         start_time = time.time()
-        caller_id = auth_token.get("sub", "anonymous") if auth_token else "anonymous"
+        caller_id = auth_token.get("sub", "anonymous") if isinstance(auth_token, dict) else "anonymous"
         tool_name = None
         payload = None
 
@@ -89,14 +89,21 @@ class SecureMCPProxy:
             if not auth_token or not self.token_validator:
                 raise SecurityPolicyViolation("Missing or unverified authentication token")
 
-            if not self.token_validator.validate_token(auth_token):
-                raise SecurityPolicyViolation("Token failed cryptographic/TTL validation")
+            try:
+                claims = self.token_validator.validate_token(auth_token)
+            except Exception as exc:  # validator errors are policy blocks, never crashes
+                raise SecurityPolicyViolation(f"Token validation failed: {exc}")
+            if not claims:
+                raise SecurityPolicyViolation("Token failed signature/TTL/claims validation")
+            if not isinstance(claims, dict):
+                claims = auth_token if isinstance(auth_token, dict) else {}
+            caller_id = claims.get("sub", caller_id)
 
             # 2. RBAC Policy Evaluation
             if tool_name not in self.ALLOWED_TOOLS:
                 raise SecurityPolicyViolation(f"Unauthorized or unknown tool: {tool_name}")
 
-            caller_role = auth_token.get("role")
+            caller_role = claims.get("role")
             if caller_role not in self.ALLOWED_TOOLS[tool_name]["allowed_roles"]:
                 raise SecurityPolicyViolation(f"Caller role '{caller_role}' unauthorized for tool '{tool_name}'")
 

@@ -44,7 +44,7 @@ class TestSecureMCPProxy(unittest.TestCase):
         self.assertIn("Unauthorized or unknown tool", res["error"]["message"])
 
     def test_argument_injection_leading_dash(self):
-        """Mitigates CVE-2026-61459 style CLI argument injection via flags."""
+        """Mitigates CWE-88 style CLI argument injection via flags."""
         req = '{"jsonrpc": "2.0", "method": "read_telemetry", "params": {"resource_name": "--namespace=kube-system"}, "id": 4}'
         res = self.proxy.handle_request(req, auth_token=self.valid_token)
         self.assertIn("error", res)

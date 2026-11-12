@@ -6,7 +6,7 @@ As enterprise architectures adopt autonomous AI agents and tool-calling interfac
 This repository implements a production-grade, zero-dependency reference control plane providing:
 1. **Cryptographic Non-Human Identity (NHI) Binding:** Short-lived RFC 7800 Proof-of-Possession (PoP) tokens utilizing `cnf` confirmation claims.
 2. **Runtime Capability Isolation:** Deterministic Model Context Protocol (MCP) proxy sidecar enforcing Role-Based Access Control (RBAC) and schema whitelisting.
-3. **Parameter & Argument Sanitization:** Recursive parameter inspection mitigating command chaining, path traversal, and CLI argument injection (e.g., CVE-2026-61459).
+3. **Parameter & Argument Sanitization:** Recursive parameter inspection mitigating command chaining, path traversal, and CLI argument injection (CWE-88).
 4. **Structured Security Telemetry:** Native, JSON-formatted audit events capturing latency, caller identity, tool execution status, and policy violation specifics for SIEM and Datadog APM ingestion.
 
 ---
