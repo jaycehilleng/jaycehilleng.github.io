@@ -1,0 +1,3 @@
+pytest>=8
+PyJWT[crypto]>=2.8
+cryptography>=42

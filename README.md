@@ -32,8 +32,8 @@ This workspace evaluates, audits, and extends enterprise reference architectures
 
 | Project / Module | Focus Area | Tech Stack | Status |
 | :--- | :--- | :--- | :--- |
-| [MCP Security Proxy](./src/mcp_proxy/) | `SecureMCPProxy`: JSON-RPC request handling, recursive argument sanitization against injection patterns, structured security telemetry. | Python, pytest | **Implemented · tests passing in CI** |
-| [NHI Token Validator](./src/identity/) | `PoPTokenValidator`: short-lived OAuth 2.0 token checks — audience, TTL, agent scopes, and RFC 7800 Proof-of-Possession (`cnf`) claim. | Python, pytest | **Implemented · tests passing in CI** |
+| [MCP Security Proxy](./src/mcp_proxy/) | `SecureMCPProxy`: policy enforcement point for MCP tool calls — JSON-RPC 2.0 validation, signature-verified caller identity, tool-level RBAC, recursive argument sanitization (CWE-88, path traversal, command chaining), structured security telemetry. Upstream forwarding to MCP servers is next. | Python, pytest | **Implemented · tests passing in CI** |
+| [NHI Token Validator](./src/identity/) | `PoPTokenValidator`: ES256 JWT signature verification (explicit algorithm allow-list, rejects `alg: none`), audience, TTL, agent scopes, and RFC 7800 `cnf` key-binding claim. Per-request DPoP proof verification (RFC 9449) is next. | Python, PyJWT, pytest | **Implemented · tests passing in CI** |
 | [Tool Authorization Policy](./src/identity/policies/mcp_tool_policy.rego) | Default-deny OPA/Rego policy: PoP-validated caller, scope-gated read tools, elevated scope + tenant match for write tools. | OPA / Rego | **Implemented** (policy authored; OPA sidecar wiring is next) |
 | [Azure Control Plane IaC](./iac/azure/) | Entra Agent ID identity, APIM inspection policy, and KQL audit queries for the runtime. | Azure Bicep, APIM, KQL | **Implemented** |
 | [AI Gateway Audit Spec](./docs/architecture-spec.md) | Technical critique and zero-trust extension design for central AI control planes. | Azure Bicep, APIM Policies, MCP | **Complete** |
@@ -46,11 +46,11 @@ This workspace evaluates, audits, and extends enterprise reference architectures
 ```bash
 git clone https://github.com/jaycehilleng/jaycehilleng.github.io
 cd jaycehilleng.github.io
-pip install pytest
+pip install -r requirements.txt
 PYTHONPATH=. python -m pytest src -v
 ```
 
-The same suite runs on every push via GitHub Actions ([CI workflow](./.github/workflows/ci.yml)), alongside CodeQL static analysis ([CodeQL workflow](./.github/workflows/codeql.yml)).
+The suite includes integration tests that run the proxy against the real validator with signed tokens: wrong-key, tampered-payload, and `alg: none` tokens are all blocked. The same suite runs on every push via GitHub Actions ([CI workflow](./.github/workflows/ci.yml)), alongside CodeQL static analysis ([CodeQL workflow](./.github/workflows/codeql.yml)).
 
 ---
 
