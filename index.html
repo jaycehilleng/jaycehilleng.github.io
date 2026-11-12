@@ -593,7 +593,7 @@
           <div class="work-card">
             <span class="work-card-tag">Artifact 2 · NHI Identity</span>
             <h3>Non-Human Identity Governance</h3>
-            <p>Entra Agent ID identity plane with signature-verified, key-bound (RFC 7800) agent tokens and 15-minute credential lifetimes. mTLS and per-request DPoP proof binding are specified in the identity spec.</p>
+            <p>Entra workload identity for agents (managed identity today; Entra Agent ID federation designed) with signature-verified, key-bound (RFC 7800) tokens and 15-minute lifetimes. Per-request DPoP proofs and mTLS are specified in the identity spec.</p>
             <ul class="mcp-links">
               <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/identity-architecture.md" target="_blank" rel="noopener">→ Identity Spec ↗</a></li>
               <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/src/identity/token_validator.py" target="_blank" rel="noopener">→ PoP Token Validator Engine ↗</a></li>
@@ -605,7 +605,7 @@
           <div class="work-card">
             <span class="work-card-tag">Artifact 3 · Audit & SIEM</span>
             <h3>Continuous Audit & Observability</h3>
-            <p>Centralized security telemetry pipeline using structured MCP JSON schemas and KQL threat detection packs for Azure Log Analytics & Sentinel.</p>
+            <p>Structured allow/block telemetry emitted by the proxy, with KQL queries for injection blocks, token failures, and daily audit summaries in Azure Log Analytics &amp; Sentinel.</p>
             <ul class="mcp-links">
               <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/audit-observability.md" target="_blank" rel="noopener">→ Telemetry & Audit Spec ↗</a></li>
               <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/iac/azure/queries.kql" target="_blank" rel="noopener">→ KQL Detection Queries ↗</a></li>

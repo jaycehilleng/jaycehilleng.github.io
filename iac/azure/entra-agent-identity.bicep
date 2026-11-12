@@ -1,4 +1,7 @@
-// Azure Bicep Module: Entra Agent ID & Workload Identity Provisioning
+// Azure Bicep Module: Agent Workload Identity
+// Implemented: a user-assigned managed identity for the agent container task (no stored secrets).
+// Designed: register the agent as an Entra Agent ID and add a federated identity credential
+// (Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials) for OIDC assertion exchange.
 targetScope = 'resourceGroup'
 
 @description('Environment name prefix')

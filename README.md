@@ -61,3 +61,4 @@ The suite includes integration tests that run the proxy against the real validat
 ├── docs/               --> Architectural specs, security audits, and technical writeups
 ├── iac/                --> Infrastructure-as-code (Azure Bicep, APIM policies)
 └── src/                --> MCP security proxy validator, identity token validation, & Python sources
+```
