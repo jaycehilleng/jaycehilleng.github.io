@@ -3,9 +3,9 @@
 ## Executive Overview
 As enterprise architectures adopt autonomous AI agents and tool-calling interfaces (e.g., Model Context Protocol / MCP), traditional perimeter-based security fails. Agents frequently act as **confused deputies**—executing untrusted input containing prompt injections, command expansions, or arbitrary parameter modifications.
 
-This repository implements a production-grade, zero-dependency reference control plane providing:
-1. **Cryptographic Non-Human Identity (NHI) Binding:** Short-lived RFC 7800 Proof-of-Possession (PoP) tokens utilizing `cnf` confirmation claims.
-2. **Runtime Capability Isolation:** Deterministic Model Context Protocol (MCP) proxy sidecar enforcing Role-Based Access Control (RBAC) and schema whitelisting.
+This repository implements a reference control plane (Python, with PyJWT for signature verification) providing:
+1. **Cryptographic Non-Human Identity (NHI) Binding:** ES256 signature-verified, short-lived tokens with required RFC 7800 `cnf` key-binding claims (per-request DPoP proofs designed).
+2. **Runtime Capability Isolation:** Deterministic Model Context Protocol (MCP) proxy sidecar enforcing a tool allow-list and Role-Based Access Control (RBAC); per-tool schema validation is designed.
 3. **Parameter & Argument Sanitization:** Recursive parameter inspection mitigating command chaining, path traversal, and CLI argument injection (CWE-88).
 4. **Structured Security Telemetry:** Native, JSON-formatted audit events capturing latency, caller identity, tool execution status, and policy violation specifics for SIEM and Datadog APM ingestion.
 
@@ -69,9 +69,8 @@ sequenceDiagram
             Proxy-->>Agent: JSON-RPC Error (-32000 Policy Violation)
         else Validation Passed
             Proxy->>SIEM: Emit JSON {"status": "ALLOWED", "event_type": "mcp_tool_execution"}
-            Proxy->>Backend: Execute Tool Method
-            Backend-->>Proxy: Execution Output
-            Proxy-->>Agent: JSON-RPC Success Result
+            Proxy-->>Agent: JSON-RPC Success Result (allow decision)
+            Note over Proxy,Backend: Forwarding to the tool backend is designed, not yet implemented
         end
     end
 ```
@@ -114,20 +113,21 @@ All proxy decisions generate a standardized JSON audit record:
 
 ## Verification & Test Coverage
 
-The test harness evaluates cryptographic identity assertion, token expiration, parameter injection attack vectors, and role-based enforcement across 11 unit assertions:
+The test harness evaluates cryptographic identity assertion, token expiration, parameter injection attack vectors, and role-based enforcement across 19 unit and integration tests (proxy wired to the real validator with signed tokens):
 
 ```bash
-python3 -m unittest discover -s src -p "test_*.py"
+pip install -r requirements.txt
+PYTHONPATH=. python -m pytest src -v
 ```
 
 ---
 
 ## Enterprise Auditability, Resiliency & Telemetry
 
-To satisfy Tier-1 financial infrastructure standards (e.g., NIST SP 800-53, FFIEC baselines), `SecureMCPProxy` enforces deterministic traceability across all agentic execution paths.
+Designed to support audit expectations in regulated environments (e.g., NIST SP 800-53 AU-family controls), `SecureMCPProxy` records an allow/block decision for every tool call it evaluates.
 
-### 1. Immutable Structured Telemetry
-Every inbound request, validation check, and tool invocation produces a structured JSON audit payload routed to standard output for SIEM (Splunk, Datadog) ingestion:
+### 1. Structured Telemetry: Target Schema (Designed)
+The proxy emits the schema shown in *Telemetry Schema* above today. The enriched record below is the designed target once OPA evaluation, trace correlation, and tenant claims are wired in:
 
 ```json
 {
@@ -151,3 +151,5 @@ Every inbound request, validation check, and tool invocation produces a structur
   },
   "status": "DISPATCHED"
 }
+
+```
