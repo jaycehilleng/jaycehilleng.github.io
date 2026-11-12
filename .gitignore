@@ -1,2 +1,7 @@
 refactor_resume_no_m365.py
 .vscode/
+
+# Python build and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
