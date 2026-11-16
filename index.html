@@ -526,6 +526,15 @@
       
       <div class="work-grid">
         <div class="work-card">
+          <span class="work-card-tag">Case Study · Agent Runtime Hardening</span>
+          <h3>Hardening a Self-Learning Agent</h3>
+          <p>Deployed and attacked an open-source personal AI agent (OpenClaw) on an isolated Azure VM. Found an LLM-judgment exec gate and a default that let the agent install its own policy-loosening skill, then moved every invariant below the agent: non-sudo identity, hardened systemd, read-only mounts, a UID-scoped kernel egress allowlist, and human approval cards. Each control proven by a live probe.</p>
+          <div class="work-card-metric">→ Approved <code>curl</code> still blocked in 0 ms · systemd exposure 9.6 → 3.7</div>
+          <ul class="mcp-links">
+            <li><a href="https://github.com/jaycehilleng/jaycehilleng.github.io/blob/main/docs/case-studies/openclaw-agent-hardening.md" target="_blank" rel="noopener">→ Read the case study ↗</a></li>
+          </ul>
+        </div>
+        <div class="work-card">
           <span class="work-card-tag">Threat Modeling · MCP</span>
           <h3>CRISP</h3>
           <p>Co-led the build and deployment of a proprietary security architecture framework operating as a Model Context Protocol server. Scans customer architectures, generates data attribute tables, and produces comprehensive, continuously updated security plans. Deployed across 100+ enterprise engagements, 20 of which I led personally.</p>
