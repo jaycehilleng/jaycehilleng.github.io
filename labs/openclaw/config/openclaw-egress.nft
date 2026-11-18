@@ -1,0 +1,24 @@
+# Reference: UID-scoped egress allowlist for the agent's service user.
+# Only traffic owned by the agent's UID is filtered; other users on the host are unaffected.
+# Allowed: loopback, and HTTPS to the model provider's published API ranges.
+# Everything else from that UID is logged (rate-limited) and rejected.
+#
+# Set the UID to the agent user's UID on your host (`id -u openclaw`).
+# Replace the address ranges with your model provider's published egress ranges.
+
+table inet openclaw_egress
+delete table inet openclaw_egress
+
+table inet openclaw_egress {
+  chain openclaw_out {
+    oifname "lo" accept
+    ip daddr 160.79.104.0/23 tcp dport 443 accept
+    ip6 daddr 2607:6bc0::/48 tcp dport 443 accept
+    limit rate 10/minute log prefix "openclaw-egress-deny: " level info
+    counter reject with icmpx type admin-prohibited
+  }
+  chain output {
+    type filter hook output priority filter; policy accept;
+    meta skuid 1001 jump openclaw_out
+  }
+}

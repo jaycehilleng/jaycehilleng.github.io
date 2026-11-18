@@ -1,0 +1,80 @@
+# Reference: hardened systemd unit for the OpenClaw gateway (lab configuration).
+# Runs the agent as a dedicated non-sudo user inside a filesystem sandbox.
+# Configuration, every skill-loader root, and git surfaces are read-only to the service.
+# Requires the egress firewall unit: if the firewall is not up, the gateway does not start.
+
+[Unit]
+Description=OpenClaw Gateway (dedicated non-sudo user)
+After=network-online.target openclaw-egress.service
+Wants=network-online.target
+Requires=openclaw-egress.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=openclaw
+Group=openclaw
+WorkingDirectory=/home/openclaw
+ExecStart=/usr/bin/node --max-old-space-size=2048 /usr/lib/node_modules/openclaw/dist/index.js gateway --port 18789
+Restart=always
+RestartSec=5
+# Exit 78 (EX_CONFIG): invalid configuration. Do not restart-loop; stay down until an operator fixes it.
+RestartPreventExitStatus=78
+TimeoutStopSec=330
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+OOMPolicy=continue
+KillMode=control-group
+UMask=0077
+Environment=HOME=/home/openclaw
+Environment=TMPDIR=/tmp
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=NODE_OPTIONS=
+Environment=OPENCLAW_GATEWAY_PORT=18789
+Environment=OPENCLAW_SYSTEMD_UNIT=openclaw-gateway.service
+Environment=OPENCLAW_SERVICE_MARKER=openclaw
+Environment=OPENCLAW_SERVICE_KIND=gateway
+
+# Privilege
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Filesystem
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindPaths=/home/openclaw
+ReadWritePaths=/home/openclaw
+
+# Immutable to the agent: configuration
+ReadOnlyPaths=/home/openclaw/.openclaw/openclaw.json
+# Immutable to the agent: all five skill-loader roots (OpenClaw 2026.11.4 precedence 1-5).
+# Each directory must exist before the unit starts.
+ReadOnlyPaths=/home/openclaw/.openclaw/workspace/skills
+ReadOnlyPaths=/home/openclaw/.openclaw/workspace/.agents/skills
+ReadOnlyPaths=/home/openclaw/.agents/skills
+ReadOnlyPaths=/home/openclaw/.openclaw/skills
+ReadOnlyPaths=/home/openclaw/.openclaw/agents/main/agent/workshop-skills
+# Immutable to the agent: git execution surfaces (hooks, core.hooksPath, global config)
+ReadOnlyPaths=/home/openclaw/.openclaw/workspace/.git/config
+ReadOnlyPaths=/home/openclaw/.openclaw/workspace/.git/hooks
+ReadOnlyPaths=/home/openclaw/.gitconfig
+ReadOnlyPaths=/home/openclaw/.config/git
+
+# Kernel and system surface
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
