@@ -1,0 +1,9 @@
+# Default owner for every path in this repository.
+* @jaycehilleng
+
+# Security-relevant paths, listed explicitly so ownership stays clear if collaborators are added.
+/.github/       @jaycehilleng
+/src/identity/  @jaycehilleng
+/iac/           @jaycehilleng
+/labs/          @jaycehilleng
+/SECURITY.md    @jaycehilleng
