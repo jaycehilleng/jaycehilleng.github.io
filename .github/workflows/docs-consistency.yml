@@ -1,0 +1,42 @@
+name: Docs and Labs Consistency
+
+# Runs on every pull request, including stacked PRs that target another branch.
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  consistency:
+    name: Links, identifiers, findings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run consistency checks
+        run: python scripts/check_consistency.py
+
+  shellcheck:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        run: |
+          mapfile -t scripts < <(git ls-files '*.sh')
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "No shell scripts to check."
+            exit 0
+          fi
+          shellcheck -S warning "${scripts[@]}"
