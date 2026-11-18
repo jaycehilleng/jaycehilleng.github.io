@@ -1,0 +1,17 @@
+# Reference: loads the egress allowlist before the gateway starts.
+# The gateway unit declares Requires= on this unit, so stopping it stops the agent (fail-closed).
+
+[Unit]
+Description=OpenClaw egress allowlist (nftables, UID-scoped)
+Before=openclaw-gateway.service
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/openclaw-egress.nft
+ExecStop=/usr/sbin/nft delete table inet openclaw_egress
+
+[Install]
+WantedBy=multi-user.target
