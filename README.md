@@ -2,6 +2,8 @@
 
 [![CI Security Test Suite](https://github.com/jaycehilleng/jaycehilleng.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/jaycehilleng/jaycehilleng.github.io/actions/workflows/ci.yml)
 
+> **Hands-on agent hardening:** [Hardening a Self-Learning Agent](./docs/case-studies/openclaw-agent-hardening.md), a probe-verified case study re-validated across a version upgrade.
+>
 > **Start here — Secure MCP Execution Runtime:** proxy code in [`src/mcp_proxy/`](./src/mcp_proxy/), identity and policy in [`src/identity/`](./src/identity/), infrastructure in [`iac/azure/`](./iac/azure/), threat matrix in [`docs/threat-matrix.md`](./docs/threat-matrix.md). Run the tests in one command (see [Verify it yourself](#-verify-it-yourself)).
 
 Welcome to my principal-level engineering workspace and public security research lab. This repository houses technical architecture specs, security audits, and hands-on laboratory implementations focused on **Zero-Trust Agent Sandboxing**, **Model Context Protocol (MCP) Governance**, and **Cloud Infrastructure Hardening**.
@@ -37,6 +39,7 @@ This workspace evaluates, audits, and extends enterprise reference architectures
 | [Tool Authorization Policy](./src/identity/policies/mcp_tool_policy.rego) | Default-deny OPA/Rego policy: PoP-validated caller, scope-gated read tools, elevated scope + tenant match for write tools. | OPA / Rego | **Implemented** (policy authored; OPA sidecar wiring is next) |
 | [Azure Control Plane IaC](./iac/azure/) | Entra Agent ID identity, APIM inspection policy, and KQL audit queries for the runtime. | Azure Bicep, APIM, KQL | **Implemented** |
 | [AI Gateway Audit Spec](./docs/architecture-spec.md) | Technical critique and zero-trust extension design for central AI control planes. | Azure Bicep, APIM Policies, MCP | **Complete** |
+| [Agent Runtime Hardening (OpenClaw)](./docs/case-studies/openclaw-agent-hardening.md) | Hands-on build, attack and hardening of a self-learning agent: non-sudo identity, hardened systemd, read-only config and skill roots, UID-scoped egress allowlist, human approval. Includes a Day 2 upgrade runbook and NIST SP 800-53 control mapping. | Linux, systemd, nftables, Azure | **Complete · re-validated on 2026.11.4** |
 | Execution Sandboxing | Isolating tool execution in ephemeral, kernel-isolated runtimes (gVisor / Wasm). | gVisor, containers | **Designed** (architecture spec; implementation on roadmap) |
 
 ---
