@@ -2,7 +2,7 @@
 
 **Author:** Jayce Hill | Principal AI Security Architect
 **Published:** November 2026
-**Scope:** One operator's deployment of OpenClaw 2026.9.2, reviewed October 4 to November 2, 2026. Everything below was observed in this configuration. Nothing here is a vulnerability claim against OpenClaw.
+**Scope:** One operator's deployment of OpenClaw 2026.9.2, reviewed October 4 to November 2, 2026, then upgraded to 2026.11.4 and re-probed on November 18, 2026. Everything below was observed in this configuration. Nothing here is a vulnerability claim against OpenClaw.
 
 ---
 
@@ -124,22 +124,42 @@ Approval gates also fail socially before they fail technically. Five cards for o
 | Writable persona and memory files | By design; a persistence surface for prompt injection |
 | Same-UID credential exposure | In-process agents share the gateway's identity |
 | Git `-c` flags on approval cards | Enforced by the human reading the card, not by the kernel |
-| Scope | One operator, one release (2026.9.2) |
+| Scope | One operator; reviewed on 2026.9.2, re-probed on 2026.11.4 |
 
 ## Upstream since this review
 
-I compared the published documentation of OpenClaw 2026.11.4 (current as of November 16, 2026) with 2026.9.2. I have not re-run the probes on 11.4.
+On November 18, 2026, I upgraded this deployment from 2026.9.2 to 2026.11.4 and re-ran every probe. Before the upgrade I took a disk snapshot, recorded the version, audit summary, security settings and SHA-256 hashes of the config, unit and firewall files, and read the 11.4 package (bundled docs and install scripts) before installing it. "Probe" below means verified on the box; "Docs" means taken from the 11.4 bundled documentation.
 
-| Area | 2026.9.2 | 2026.11.4 |
-| --- | --- | --- |
-| Self-learning default | `autonomous.mode: "auto"` | Still `"auto"` |
-| Human review of learned skills | `propose` mode and `approvalPolicy: "pending"` available; neither is the default | Retired. Changes apply immediately, with undo and version history |
-| Skill allowlists | Not stated | Learned skills bypass `agents.defaults.skills` allowlists |
-| Write-time checks | Size limits | A critical security-scanner finding, such as a literal secret, refuses the write |
-| Upgrade | n/a | `doctor --fix` migrates `propose` to `off` |
-| `security audit` | Configuration checks | Same; no check for a gateway user with passwordless sudo |
+| Area | 2026.9.2 | 2026.11.4 | Source |
+| --- | --- | --- | --- |
+| Runtime | Node 22 | Requires Node 24.16 or later; the upgrade was a Node major version bump first | Probe |
+| Self-learning default | `autonomous.mode: "auto"` | Still `"auto"` | Docs |
+| Human review of learned skills | `propose` mode and `approvalPolicy: "pending"` available; neither is the default | Retired. Changes apply immediately, with undo and the newest 10 versions kept | Docs |
+| Stale `propose` config | n/a | Gateway refuses to start (`config is invalid`, exit 78); it does not fall back to defaults | Probe |
+| Upgrade repair | n/a | `doctor --fix` rewrote `propose` to `off`, not `auto`; it left the hardened systemd unit untouched (hash unchanged) | Probe |
+| Learned-skill undo from chat | n/a | Runs through the `skill_workshop` tool. With that tool denied, it is absent from the agent's 41-tool catalog, so asking for it fails | Probe |
+| Skill roots | Four writable roots under the agent's home | Five: adds `agents/<id>/agent/workshop-skills` | Probe |
+| Exec approvals | Allowlisted binary runs without a card | `NAME+=value ls` raises a card despite `ls` being allowlisted; a command that cannot be bound to an approval is refused (`SYSTEM_RUN_DENIED`) | Probe |
+| Control UI | n/a | Warns before a link switches the browser to a different gateway | Probe |
+| Skill allowlists | Not stated | Learned skills bypass `agents.defaults.skills` allowlists | Docs |
+| Write-time checks | Size limits | A critical security-scanner finding, such as a literal secret, refuses the write | Docs |
+| `security audit` | 0 critical, 1 warn, 1 info | Same; still no check for a gateway user with passwordless sudo | Probe |
 
-The vendor chose "apply now, undo later" for a single-operator assistant. That's a defensible product decision. For a deployment holding credentials, I chose off, enforced below the agent with read-only mounts, and the upgrade path preserves that choice.
+Every October control held on 11.4: exposure still 3.7 OK, `sudo -n true` still fails, an arbitrary site is still refused (and so were 11.4's own unprompted connections to its docs site), the model API is still reachable, and `rm -rf` still comes back `user-denied`.
+
+### Correction: I locked one skill folder out of five
+
+The upgrade sent me back to the skill loader's precedence table, and it showed something my October hardening missed. I had made `workspace/skills` read-only. The loader also reads `workspace/.agents/skills` (which outranks it), `~/.agents/skills` and `~/.openclaw/skills`. Those three were already in 2026.9.2's documentation. 2026.11.4 adds a fifth, `workshop-skills`.
+
+To test it, I wrote a harmless canary `SKILL.md` into each of the four uncovered roots as the agent's user. All four loaded as `ready`. Any process running as that user, including the agent's own file tools, which raise no approval card, could have installed a live skill, and one of those roots would shadow a same-named skill in the folder I had locked.
+
+The fix was four more read-only mounts. Retried from inside the service's mount namespace, all four writes returned `Read-only file system`. The agent independently named the same path when asked how skills get authored without the workshop: "the skill-creator skill plus file edits."
+
+**Lesson:** I locked the folder I knew about. Lock every path the loader reads, and get that list from the loader's own documentation for the version you run.
+
+One behavior didn't change. After I denied a few commands in a row, the agent concluded that something in the approval path was "rejecting everything" and suggested I look into why. It treated a human "no" as a malfunction. That is the social failure mode from section 6, unchanged across releases.
+
+The vendor chose "apply now, undo later" for a single-operator assistant. That's a defensible product decision. For a deployment holding credentials, I chose off, enforced below the agent with read-only mounts on every skill root. The upgrade path preserves that choice, and when a stale setting can't be read, 11.4 stops rather than guessing.
 
 ---
 
