@@ -6,13 +6,19 @@
 
 ---
 
+> **For deployment leads**
+> - **Risk:** Out of the box, this agent ran with root-equivalent rights, an AI model (not a policy) approving its commands, and the ability to rewrite its own instructions.
+> - **What was done:** Every safety control moved below the agent, into OS identity, the service sandbox, read-only files, a kernel egress allowlist and human approval. Each control is verified by a repeatable probe, and the set was re-validated after a version upgrade.
+> - **What remains:** DNS-based exfiltration, a multi-tenant model endpoint, credentials readable by the agent's identity, and no centralized audit trail yet. See [Honest residuals](#honest-residuals).
+> - **What to require of any agent platform:** least-privilege runtime identity, deny-by-default egress, immutable configuration and skills, human approval for consequential actions, and an upgrade process that re-proves all of the above.
+
 ## Summary
 
 I deployed an open-source personal AI agent, gave it real tools, and attacked my own controls. Two things stood out. The agent's command gate in its default "auto" mode was an LLM's judgment, not a policy. And by default the agent could write and install its own skills, and the first skill it wrote for itself was a procedure for loosening its own exec policy.
 
 The fix was to stop asking the agent to enforce anything. Every invariant now sits below it, in the OS user, systemd, read-only mounts, the kernel firewall, and a human approval screen. Each control was proven with a live probe, not taken from a config file or a status report.
 
-The review logged 14 findings: 2 critical, 4 high. Severity here means risk in this deployment, not a CVSS score for the product.
+The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
 
 ## The environment
 
@@ -62,7 +68,7 @@ After a session spent configuring exec approvals, Scout wrote and installed a sk
 I quarantined the skill outside the agent's reach with SHA-256 hashes recorded, then:
 
 - Set `autonomous.mode` to `propose` and `approvalPolicy` to `pending`, so nothing applies without the operator.
-- Made `skills/` and `openclaw.json` read-only to the service with systemd bind mounts. The `write` tool can otherwise drop a `SKILL.md` straight into the skills directory, and file tools do not raise exec approval cards.
+- Made `skills/` and `openclaw.json` read-only to the service with systemd bind mounts. The `write` tool can otherwise drop a `SKILL.md` straight into the skills directory, and file tools do not raise exec approval cards. (This covered one of the loader's skill roots, not all of them. See the [correction](#correction-i-locked-one-skill-folder-out-of-five).)
 
 **Lesson:** the most dangerous finding wasn't a bug. It was a default.
 
@@ -74,7 +80,7 @@ Prompt rules and agent memory are advisory. The agent can read them, argue with 
 | --- | --- | --- |
 | OS identity | Non-sudo user, locked password | `sudo -n true` fails |
 | Process | Hardened systemd unit | Exposure 3.7 OK |
-| Config and skills | Read-only bind mounts: `openclaw.json`, `skills/`, `.git/config`, `.git/hooks`, `~/.gitconfig`, `~/.config/git` | Write attempts return `EROFS` |
+| Config and skills | Read-only bind mounts: `openclaw.json`, all five skill-loader roots (four added November 18, see [correction](#correction-i-locked-one-skill-folder-out-of-five)), `.git/config`, `.git/hooks`, `~/.gitconfig`, `~/.config/git` | Write attempts return `EROFS` |
 | Tool surface | Denied: web fetch and search, code execution, cron, Skill Workshop; elevated mode and browser off | "Tool unavailable" |
 | Approvals | `ask` mode, six-entry allowlist, cards in the Control UI over an SSH tunnel, gateway on loopback only | `rm -rf` returns `user-denied` |
 
@@ -115,20 +121,35 @@ Approval gates also fail socially before they fail technically. Five cards for o
 - **Secrets can't be hidden from an in-process agent.** The model API key lives in a store the agent's own identity can read. Egress control limits where it can go; a separate execution identity or short-lived credentials is the real fix.
 - **Verify the control, not the report.** The CLI, the audit, the docs, and the agent each told me something false at least once. Every row above is backed by a probe.
 
+### Portability
+
+None of these controls depend on OpenClaw or on the model provider. Runtime identity, the service sandbox, read-only configuration and skills, deny-by-default egress and human approval sit below the agent. They apply the same way to any agent runtime that executes tools on a host, whichever model it calls. The OpenClaw-specific parts are the paths: where configuration lives and where the skill loader reads.
+
 ## Honest residuals
 
-| Residual | Why it remains |
-| --- | --- |
-| DNS tunneling | The allowlist covers IP traffic; the local resolver still answers queries |
-| Multi-tenant API endpoint | An attacker-supplied API key could route data to another account at the same provider |
-| Writable persona and memory files | By design; a persistence surface for prompt injection |
-| Same-UID credential exposure | In-process agents share the gateway's identity |
-| Git `-c` flags on approval cards | Enforced by the human reading the card, not by the kernel |
-| Scope | One operator; reviewed on 2026.9.2, re-probed on 2026.11.4 |
+| Residual | Why it remains | Next control |
+| --- | --- | --- |
+| DNS tunneling | The allowlist covers IP traffic; the local resolver still answers queries | Pin the model API host and drop DNS for the agent's UID |
+| Multi-tenant API endpoint | An attacker-supplied API key could route data to another account at the same provider | Route model traffic through a local proxy that accepts only the operator's credential |
+| Writable persona and memory files | By design; a persistence surface for prompt injection | Snapshot and diff them per session; alert on change |
+| Same-UID credential exposure | In-process agents share the gateway's identity | Separate execution identity, or short-lived credentials issued by a broker |
+| No centralized audit trail | Approval decisions and firewall denials live only in the host journal | Forward approval events and egress denials to a SIEM |
+| Git `-c` flags on approval cards | Enforced by the human reading the card, not by the kernel | Allowlist git subcommands without `-c` |
+| Scope | One operator; reviewed on 2026.9.2, re-validated on 2026.11.4 | n/a |
 
-## Upstream since this review
+## Day 2: upgrading a hardened agent
 
-On November 18, 2026, I upgraded this deployment from 2026.9.2 to 2026.11.4 and re-ran every probe. Before the upgrade I took a disk snapshot, recorded the version, audit summary, security settings and SHA-256 hashes of the config, unit and firewall files, and read the 11.4 package (bundled docs and install scripts) before installing it. "Probe" below means verified on the box; "Docs" means taken from the 11.4 bundled documentation.
+Hardening is only as current as the release it was tested on. On November 18, 2026, I upgraded this deployment from 2026.9.2 to 2026.11.4 and re-validated every control, using this runbook:
+
+1. **Recover point:** incremental disk snapshot, taken with the VM deallocated.
+2. **Baseline:** version, `security audit` summary, the security-relevant config sections, and SHA-256 hashes of the config, service unit and firewall files.
+3. **Inspect before install:** download the new package without installing it. Read its install scripts (they run as root) and its bundled documentation, including the upgrade notes and the skill-loader paths.
+4. **Prerequisites:** 11.4 required a Node.js major-version upgrade, done from the same package source as the original install.
+5. **Upgrade with the agent stopped,** then diff hashes and security settings against the baseline.
+6. **Preview repairs before applying them:** run `doctor` without `--fix`, read the plan, then apply.
+7. **Re-probe every control,** including from inside the service's own mount namespace, then record new known-good hashes.
+
+"Probe" below means verified on the host; "Docs" means taken from the 11.4 bundled documentation.
 
 | Area | 2026.9.2 | 2026.11.4 | Source |
 | --- | --- | --- | --- |
@@ -160,6 +181,44 @@ The fix was four more read-only mounts. Retried from inside the service's mount 
 One behavior didn't change. After I denied a few commands in a row, the agent concluded that something in the approval path was "rejecting everything" and suggested I look into why. It treated a human "no" as a malfunction. That is the social failure mode from section 6, unchanged across releases.
 
 The vendor chose "apply now, undo later" for a single-operator assistant. That's a defensible product decision. For a deployment holding credentials, I chose off, enforced below the agent with read-only mounts on every skill root. The upgrade path preserves that choice, and when a stale setting can't be read, 11.4 stops rather than guessing.
+
+## Control mapping (NIST SP 800-53 Rev. 5)
+
+This table orients the controls above for teams working toward an authorization. It is a mapping for orientation, not an assessment: this is a single-operator lab with no system security plan.
+
+| Control | Implementation here | Evidence | Gap |
+| --- | --- | --- | --- |
+| AC-6 Least Privilege | Dedicated non-sudo service user, empty capability set, `NoNewPrivileges` | `sudo -n true` fails; exposure 3.7 OK | n/a |
+| AC-3 Access Enforcement | Human approval required for non-allowlisted commands | `rm -rf` returns `user-denied` | File tools write without a card (mitigated by read-only mounts) |
+| CM-2 Baseline Configuration | Recorded version, audit summary, security settings, and file hashes | Baseline compared after upgrade | Manual, not continuous |
+| CM-3 Configuration Change Control | Day 2 upgrade runbook with preview-before-repair | Section above | No formal change board (single operator) |
+| CM-5 Access Restrictions for Change | Config, skill roots and git surfaces are read-only to the agent | Writes return `EROFS` | Persona and memory files writable by design |
+| CM-7 Least Functionality | Web, code execution, cron and skill-authoring tools denied; browser and elevated mode off | Tools absent from the agent's catalog | n/a |
+| SC-7 Boundary Protection, (5) Deny by Default | UID-scoped nftables allowlist; agent fails closed without it | Approved `curl` blocked; model API reachable | DNS; multi-tenant endpoint |
+| SI-7 Software and Information Integrity | Hash baselines for config, unit and firewall files; skills immutable to the agent | Hash diff after upgrade | No automated integrity monitoring |
+| IA-5 Authenticator Management | Model API key rotated on a 90-day cycle through a hidden prompt; account spend cap | Old key deleted after the new key was verified | Key readable by the agent's identity |
+| AU-2 / AU-12 Event Logging | Egress denials logged by the kernel; approval decisions in the gateway log | Denials attributed to destinations | No centralized retention or review (AU-6) |
+| CP-9 System Backup | Disk snapshot before every upgrade | Snapshot taken before 2026.11.4 | n/a |
+
+## Appendix: findings
+
+| # | Finding | Severity | Status |
+| --- | --- | --- | --- |
+| 1 | Agent ran as a user with passwordless sudo; the built-in audit did not flag it | Critical | Remediated: dedicated non-sudo user, hardened unit |
+| 2 | Self-learning default auto-installed an agent-written skill for loosening its own exec policy | Critical | Remediated: skill quarantined with hashes; self-learning off; skill roots read-only |
+| 3 | "Auto" exec mode is LLM judgment; it approved `rm -rf` and outbound `curl` | High | Remediated: `ask` mode with Control UI approvals |
+| 4 | File tools (write, edit) bypass exec approvals | High | Partial: config, skills and git surfaces read-only; persona and memory writable by design |
+| 5 | Writable `.git/` turns an approved commit into code execution (hooks, `core.hooksPath`) | High | Remediated: git config and hooks read-only. Residual: `-c` flags are human-enforced |
+| 6 | Egress outside exec through in-process web tools | High | Remediated: UID-scoped kernel allowlist, fail-closed |
+| 7 | `find` on the read-only allowlist is an execution primitive (`-exec`, `-delete`) | Medium | Remediated: removed from allowlist |
+| 8 | A partial user migration left stale paths that hid the workspace from the audit | Medium | Remediated |
+| 9 | The terminal UI cannot render approval cards, so `ask` mode denied everything silently | Medium | Remediated: Control UI over an SSH tunnel, gateway on loopback |
+| 10 | The model API key sits in a store the agent's identity can read | Medium | Partial: rotation and spend cap; egress limits where it can go |
+| 11 | The agent's memory recorded wrong security conclusions (three caught) | Medium | Open: canonical record kept outside the agent |
+| 12 | The CLI reports "applies without restart" when read-only mounts mean it doesn't | Low | Documented |
+| 13 | Background "dreaming" writes to agent memory unattended | Low | Open |
+| 14 | Audit probe blind spot for the `operator.read` scope | Info | Documented (by design) |
+| 15 | Skill loader reads four roots the October hardening did not cover; canaries loaded from all four | High | Remediated November 18: four more read-only mounts, `EROFS` verified |
 
 ---
 
