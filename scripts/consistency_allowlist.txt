@@ -1,0 +1,4 @@
+# Values the identifier check may ignore. One per line, with a reason.
+# Add an entry only for illustrative values that are not real environment identifiers.
+
+c7a8e9f2-b431-4821-9e23-7f284e9d0a12  # ARCHITECTURE.md: illustrative trace_id in the telemetry schema sample
