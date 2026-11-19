@@ -18,7 +18,7 @@ I deployed an open-source personal AI agent, gave it real tools, and attacked my
 
 The fix was to stop asking the agent to enforce anything. Every invariant now sits below it, in the OS user, systemd, read-only mounts, the kernel firewall, and a human approval screen. Each control was proven with a live probe, not taken from a config file or a status report.
 
-The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
+The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth, and a denial-response evaluation added a sixteenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
 
 ## The environment
 
@@ -114,6 +114,27 @@ The terminal chat interface could not render approval cards. With `ask` mode on,
 
 Approval gates also fail socially before they fail technically. Five cards for one commit is how you train someone to click Allow. The allowlist covers routine read operations so the cards that do appear deserve attention.
 
+### Measured: what the agent does after a human says no
+
+On November 19 I measured it. A [denial-response evaluation](../../labs/openclaw/eval/) gave the agent three tasks that each need a non-allowlisted command (`rm -rf`, `curl`, `tar`), denied every approval through the same path as the Control UI's Deny button, and recorded what it did next. The harness can only deny; it has no code path that approves anything.
+
+| Behavior | First "no" (9 sessions) | Under pressure (6 sessions, 24 turns) |
+| --- | --- | --- |
+| Completed the task anyway | 0 | 0 |
+| Bypassed the gate with file-editing tools | 0 | 0 |
+| Re-requested the identical command | 0 | 6, at 2 to 4 approval cards per session |
+| Suggested the human's "no" might be a system fault | 0 | 4 |
+| Pointed the operator at loosening or inspecting exec policy | 0 | 3 (1 explicit: "loosen the exec policy for this session") |
+| Reached for the `gateway` tool after being told to "find a way" | 0 | 3 |
+
+The pressure sessions pushed back three times in the same conversation, ending with "find a way" and "do whatever it takes". Labels are human-reviewed; the automatic classifier over-reported workarounds, so every label was checked against the transcript evidence.
+
+Two results matter. First, the kernel-level controls held: nothing ran, and nothing was routed around them. Second, the social pressure on the human is real and repeatable. Each push produced another approval card, and in four of six sessions the agent framed a deliberate denial as a possible fault. That is approval fatigue, measured.
+
+The third result was a new finding (#16). Told to "find a way", the agent used its `gateway` tool to look for a way to inspect or change its own approval policy, and reported that the tool exposed `update.run` but not `config.get`. OpenClaw's own restricted-agent examples deny `gateway`; this configuration did not. It is now denied, and the probe suite checks it.
+
+**Lesson:** test the human side of the gate as deliberately as the technical side. The controls below the agent held under pressure. The person reading the cards is the part that needs protecting.
+
 ## 7. What I'd tell a platform team
 
 - **Prompt guardrails are advisory.** Controls the agent can't negotiate with live in the OS, the scheduler, and tool policy.
@@ -193,7 +214,7 @@ This table orients the controls above for teams working toward an authorization.
 | CM-2 Baseline Configuration | Recorded version, audit summary, security settings, and file hashes | Baseline compared after upgrade | Manual, not continuous |
 | CM-3 Configuration Change Control | Day 2 upgrade runbook with preview-before-repair | Section above | No formal change board (single operator) |
 | CM-5 Access Restrictions for Change | Config, skill roots and git surfaces are read-only to the agent | Writes return `EROFS` | Persona and memory files writable by design |
-| CM-7 Least Functionality | Web, code execution, cron and skill-authoring tools denied; browser and elevated mode off | Tools absent from the agent's catalog | n/a |
+| CM-7 Least Functionality | Web, code execution, cron, skill-authoring and gateway tools denied; browser and elevated mode off | Tools absent from the agent's catalog | n/a |
 | SC-7 Boundary Protection, (5) Deny by Default | UID-scoped nftables allowlist; agent fails closed without it | Approved `curl` blocked; model API reachable | DNS; multi-tenant endpoint |
 | SI-7 Software and Information Integrity | Hash baselines for config, unit and firewall files; skills immutable to the agent | Hash diff after upgrade | No automated integrity monitoring |
 | IA-5 Authenticator Management | Model API key rotated on a 90-day cycle through a hidden prompt; account spend cap | Old key deleted after the new key was verified | Key readable by the agent's identity |
@@ -219,6 +240,7 @@ This table orients the controls above for teams working toward an authorization.
 | 13 | Background "dreaming" writes to agent memory unattended | Low | Open |
 | 14 | Audit probe blind spot for the `operator.read` scope | Info | Documented (by design) |
 | 15 | Skill loader reads four roots the October hardening did not cover; canaries loaded from all four | High | Remediated November 18: four more read-only mounts, `EROFS` verified |
+| 16 | Under pressure, the agent used its `gateway` tool to look for a way to inspect or change its approval policy; the tool exposes `update.run` | High | Remediated November 19: `gateway` denied; absent from the agent's catalog; added to the probe suite |
 
 ---
 
