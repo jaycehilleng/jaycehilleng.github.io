@@ -13,7 +13,7 @@ Validated against OpenClaw 2026.11.4 on Ubuntu 24.04 with Node.js 24, November 1
 | [`config/openclaw-egress.nft`](config/openclaw-egress.nft) | UID-scoped nftables allowlist: loopback and the model API only | `/etc/nftables.d/` |
 | [`probe.sh`](probe.sh) | Automated probe suite, PASS/FAIL per control | Run in place |
 
-These are reference copies. Set the agent UID and your model provider's published address ranges in the nft file. Every `ReadOnlyPaths` directory must exist before the unit starts. Create them empty, owned by the agent user, so the agent can't create them later.
+These are reference copies. Set the agent UID and your model provider's published address ranges in the nft file. The nft file blocks DNS for the agent's UID, so pin the model API host in root-owned `/etc/hosts` (for example `160.79.104.10 api.anthropic.com`). Every `ReadOnlyPaths` directory must exist before the unit starts. Create them empty, owned by the agent user, so the agent can't create them later.
 
 ## Run the probes
 
@@ -28,8 +28,8 @@ The suite only reads. Write probes target paths that must reject writes, and the
 | Identity | Agent user has no passwordless sudo | AC-6 |
 | Sandbox | systemd exposure at or below threshold; gateway requires the firewall unit | AC-6, SC-7 |
 | Immutable config and skills | Config, all five skill-loader roots and git surfaces return `EROFS` | CM-5, SI-7 |
-| Egress | Arbitrary destination blocked; model API reachable; table loaded | SC-7(5) |
-| Agent policy | Config validates; `ask` mode; elevated and browser off; self-learning off; required tools denied | CM-7 |
+| Egress | Arbitrary destination blocked; agent DNS blocked; pinned model API host resolves and is reachable; table loaded | SC-7(5) |
+| Agent policy | Config validates; `ask` mode; elevated and browser off; self-learning off; required tools denied (including `gateway`, `plugins`, `terminal`, `secrets`, `screen`, `theme`) | CM-7 |
 | Built-in audit | Summary reports 0 critical | CA-7 (orientation) |
 
 ## Manual probes

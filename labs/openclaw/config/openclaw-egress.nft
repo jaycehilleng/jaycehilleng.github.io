@@ -11,6 +11,10 @@ delete table inet openclaw_egress
 
 table inet openclaw_egress {
   chain openclaw_out {
+    # No DNS for the agent: closes tunneling through the local resolver.
+    # The model API host is pinned in /etc/hosts instead.
+    meta l4proto { tcp, udp } th dport 53 limit rate 10/minute log prefix "openclaw-dns-deny: " level info
+    meta l4proto { tcp, udp } th dport 53 counter reject with icmpx type admin-prohibited
     oifname "lo" accept
     ip daddr 160.79.104.0/23 tcp dport 443 accept
     ip6 daddr 2607:6bc0::/48 tcp dport 443 accept
