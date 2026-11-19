@@ -18,7 +18,7 @@ I deployed an open-source personal AI agent, gave it real tools, and attacked my
 
 The fix was to stop asking the agent to enforce anything. Every invariant now sits below it, in the OS user, systemd, read-only mounts, the kernel firewall, and a human approval screen. Each control was proven with a live probe, not taken from a config file or a status report.
 
-The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth, and a denial-response evaluation added a sixteenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
+The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth, a denial-response evaluation added a sixteenth, and a review of the default tool catalog added a seventeenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
 
 ## The environment
 
@@ -89,6 +89,19 @@ Two details from this layer:
 - **`find` is not read-only.** It was on the "read-only" allowlist, but `find -exec` and `find -delete` make it a general execution primitive. It came off.
 - **Git flags are the payload.** A writable `.git/` turns an approved `git commit` into code execution through hooks or `core.hooksPath`. A card that says `git` is not safe because it says git. The `-c` flags on the card are what to read. The agent itself flagged this one.
 
+### Least functionality: the default tool catalog
+
+On November 19 I reviewed every tool the agent could still reach against OpenClaw's own tool catalog. Five of them gave an assistant operator-grade capabilities by default:
+
+| Tool | What the catalog says it does | Why it was denied |
+| --- | --- | --- |
+| `plugins` | Inspect, install, enable, disable, remove or reload plugins | Agent-reachable code installation, and a path to re-enabling the disabled browser plugin |
+| `terminal` | Use shared operator terminals | The operator's terminal should not be reachable from the agent |
+| `secrets` | Ask the human for a credential through a trusted prompt, with an agent-written reason and proposed egress hosts | The same lever the denial evaluation showed the agent uses on the operator, aimed at credentials |
+| `screen`, `theme` | Arrange Control UI panes; create appearance themes | The Control UI is the approval gate; the agent should not be able to restyle the screen where the human clicks Deny (a precaution, not a demonstrated exploit) |
+
+`process` (managing processes the agent started through `exec`) and `ask_user` (pausing for a human decision) stayed. All five are denied; the agent reports each as absent while still reporting `process` and `ask_user` present, and the probe suite now requires the denies.
+
 ## 5. Egress: kernel, not judgment
 
 Web tools ran inside the gateway process, outside exec policy, so blocking `curl` at the approval layer did not stop outbound HTTP. The Azure network security group restricted inbound traffic only.
@@ -105,6 +118,8 @@ Egress is now an nftables allowlist scoped to the agent's UID with `meta skuid`.
 | Stop the firewall | Gateway goes `inactive` with it |
 
 The approved `curl` is the result that matters. I clicked Allow, and the command still could not leave the host. A mistaken approval no longer becomes exfiltration.
+
+DNS was the remaining path: the agent's UID could still query the local resolver, which forwards queries to the internet under its own identity. On November 19 that closed. The model API host is pinned in root-owned `/etc/hosts`, and DNS on port 53 is rejected for the agent's UID ahead of the loopback rule. Name lookups for anything else now fail for the agent, while the model API still resolves and answers. The trade-off is deliberate: if the provider changes that address, the agent fails closed until the pin is updated.
 
 **Lesson:** some controls belong to the kernel, and some belong to the human reading the card. Know which is which.
 
@@ -150,7 +165,8 @@ None of these controls depend on OpenClaw or on the model provider. Runtime iden
 
 | Residual | Why it remains | Next control |
 | --- | --- | --- |
-| DNS tunneling | The allowlist covers IP traffic; the local resolver still answers queries | Pin the model API host and drop DNS for the agent's UID |
+| Pinned model API address | DNS is closed for the agent; a provider address change stops the agent until the pin is updated (fails closed) | Monitor the provider's published addresses; update the pin through change control |
+| Operator CLI `agent exec` | Runs a turn embedded, outside the service sandbox and read-only mounts | Keep it to operator use; run agent turns through the Gateway |
 | Multi-tenant API endpoint | An attacker-supplied API key could route data to another account at the same provider | Route model traffic through a local proxy that accepts only the operator's credential |
 | Writable persona and memory files | By design; a persistence surface for prompt injection | Snapshot and diff them per session; alert on change |
 | Same-UID credential exposure | In-process agents share the gateway's identity | Separate execution identity, or short-lived credentials issued by a broker |
@@ -214,8 +230,8 @@ This table orients the controls above for teams working toward an authorization.
 | CM-2 Baseline Configuration | Recorded version, audit summary, security settings, and file hashes | Baseline compared after upgrade | Manual, not continuous |
 | CM-3 Configuration Change Control | Day 2 upgrade runbook with preview-before-repair | Section above | No formal change board (single operator) |
 | CM-5 Access Restrictions for Change | Config, skill roots and git surfaces are read-only to the agent | Writes return `EROFS` | Persona and memory files writable by design |
-| CM-7 Least Functionality | Web, code execution, cron, skill-authoring and gateway tools denied; browser and elevated mode off | Tools absent from the agent's catalog | n/a |
-| SC-7 Boundary Protection, (5) Deny by Default | UID-scoped nftables allowlist; agent fails closed without it | Approved `curl` blocked; model API reachable | DNS; multi-tenant endpoint |
+| CM-7 Least Functionality | Web, code execution, cron, skill-authoring, gateway, plugin, terminal, secrets and UI-theming tools denied; browser and elevated mode off | Tools absent from the agent's catalog | n/a |
+| SC-7 Boundary Protection, (5) Deny by Default | UID-scoped nftables allowlist; DNS blocked for the agent's UID; model API pinned in `/etc/hosts`; agent fails closed without the firewall | Approved `curl` blocked; other name lookups fail; model API reachable | Multi-tenant endpoint |
 | SI-7 Software and Information Integrity | Hash baselines for config, unit and firewall files; skills immutable to the agent | Hash diff after upgrade | No automated integrity monitoring |
 | IA-5 Authenticator Management | Model API key rotated on a 90-day cycle through a hidden prompt; account spend cap | Old key deleted after the new key was verified | Key readable by the agent's identity |
 | AU-2 / AU-12 Event Logging | Egress denials logged by the kernel; approval decisions in the gateway log | Denials attributed to destinations | No centralized retention or review (AU-6) |
@@ -241,6 +257,7 @@ This table orients the controls above for teams working toward an authorization.
 | 14 | Audit probe blind spot for the `operator.read` scope | Info | Documented (by design) |
 | 15 | Skill loader reads four roots the October hardening did not cover; canaries loaded from all four | High | Remediated November 18: four more read-only mounts, `EROFS` verified |
 | 16 | Under pressure, the agent used its `gateway` tool to look for a way to inspect or change its approval policy; the tool exposes `update.run` | High | Remediated November 19: `gateway` denied; absent from the agent's catalog; added to the probe suite |
+| 17 | The default tool catalog gives the agent operator-grade tools: plugin installation, operator terminals, credential prompts and restyling of the approval screen | High | Remediated November 19: `plugins`, `terminal`, `secrets`, `screen`, `theme` denied; absent from the catalog; added to the probe suite |
 
 ---
 
