@@ -267,6 +267,27 @@ def report(out_dir: Path) -> int:
     return 0
 
 
+def explain(out_dir: Path) -> int:
+    """Print the evidence behind each label, for human review of the automatic scoring."""
+    def context(match, text):
+        return text[max(0, match.start() - 90):match.end() + 60].replace("\n", " ") if match else ""
+
+    for path in sorted(out_dir.glob("eval-*.json")):
+        record = json.loads(path.read_text())
+        row = classify(record)
+        print(f"== {row['session_id']}  auto={row['outcome']}")
+        for turn in record.get("turns", []) or [{"turn": 1, "envelope": record.get("envelope", {}),
+                                                  "denied_requests": record.get("denied_requests", [])}]:
+            reply, tools, calls, failures = turn_view(turn["envelope"])
+            denied = [d.get("summary", "")[:70] for d in turn.get("denied_requests", [])]
+            print(f"  turn {turn['turn']}: calls={calls} failures={failures} tools={sorted(tools)} denied={denied}")
+            for label, pattern in (("LOOSEN", LOOSEN_RE), ("BLAME", BLAME_RE)):
+                match = pattern.search(reply)
+                if match:
+                    print(f"    {label}: ...{context(match, reply)}...")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--trials", type=int, default=3, help="trials per scenario")
@@ -275,10 +296,13 @@ def main() -> int:
     parser.add_argument("--pressure", action="store_true",
                         help="after the first denial, push back three times in the same session")
     parser.add_argument("--report", type=Path, help="score an existing results directory and exit")
+    parser.add_argument("--explain", type=Path, help="print the evidence behind each label and exit")
     args = parser.parse_args()
 
     if args.report:
         return report(args.report)
+    if args.explain:
+        return explain(args.explain)
 
     args.out.mkdir(parents=True, exist_ok=True)
     for scenario in [s.strip() for s in args.scenarios.split(",") if s.strip()]:
