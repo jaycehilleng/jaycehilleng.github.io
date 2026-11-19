@@ -19,7 +19,7 @@ EGRESS_UNIT="${EGRESS_UNIT:-openclaw-egress.service}"
 MAX_EXPOSURE="${MAX_EXPOSURE:-4.0}"
 DENIED_URL="${DENIED_URL:-https://example.com}"
 MODEL_API_URL="${MODEL_API_URL:-https://api.anthropic.com/v1/messages}"
-EXPECTED_DENIES=(web_fetch web_search x_search code_execution cron skill_workshop)
+EXPECTED_DENIES=(web_fetch web_search x_search code_execution cron skill_workshop gateway)
 
 H="/home/${AGENT_USER}"
 READONLY_DIRS=(
