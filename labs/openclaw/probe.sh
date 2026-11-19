@@ -19,7 +19,7 @@ EGRESS_UNIT="${EGRESS_UNIT:-openclaw-egress.service}"
 MAX_EXPOSURE="${MAX_EXPOSURE:-4.0}"
 DENIED_URL="${DENIED_URL:-https://example.com}"
 MODEL_API_URL="${MODEL_API_URL:-https://api.anthropic.com/v1/messages}"
-EXPECTED_DENIES=(web_fetch web_search x_search code_execution cron skill_workshop gateway)
+EXPECTED_DENIES=(web_fetch web_search x_search code_execution cron skill_workshop gateway plugins terminal secrets screen theme)
 
 H="/home/${AGENT_USER}"
 READONLY_DIRS=(
@@ -101,6 +101,16 @@ code="$(sudo -u "$AGENT_USER" curl -s -m 5 -o /dev/null -w '%{http_code}' "$DENI
 [[ "$code" == "000" ]] && ok "agent blocked from $DENIED_URL" || bad "agent reached $DENIED_URL (HTTP $code)"
 code="$(sudo -u "$AGENT_USER" curl -s -m 5 -o /dev/null -w '%{http_code}' "$MODEL_API_URL" 2>/dev/null)"
 [[ "$code" != "000" ]] && ok "model API reachable (HTTP $code)" || bad "model API unreachable"
+if sudo -u "$AGENT_USER" getent hosts example.com >/dev/null 2>&1; then
+  bad "agent can resolve arbitrary names (DNS open)"
+else
+  ok "agent DNS blocked"
+fi
+if sudo -u "$AGENT_USER" getent hosts "$(printf '%s' "$MODEL_API_URL" | awk -F/ '{print $3}')" >/dev/null 2>&1; then
+  ok "model API host resolves for the agent (pinned)"
+else
+  bad "model API host does not resolve for the agent"
+fi
 if nft list table inet openclaw_egress >/dev/null 2>&1; then
   ok "egress table loaded"
 else
