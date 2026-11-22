@@ -170,7 +170,7 @@ None of these controls depend on OpenClaw or on the model provider. Runtime iden
 | Pinned model API address | DNS is closed for the agent; a provider address change stops the agent until the pin is updated (fails closed) | Monitor the provider's published addresses; update the pin through change control |
 | Operator CLI `agent exec` | Runs a turn embedded, outside the service sandbox and read-only mounts | Keep it to operator use; run agent turns through the Gateway |
 | Multi-tenant API endpoint | An attacker-supplied API key could route data to another account at the same provider | Route model traffic through a local proxy that accepts only the operator's credential |
-| Writable persona and memory files | By design; a persistence surface for prompt injection | Snapshot and diff them per session; alert on change |
+| Writable persona and memory files | By design; a persistence surface for prompt injection | Snapshot and diff them per session; alert on change. Exercised by the [incident-response drill](../../labs/openclaw/ir-drill/README.md#results) |
 | Same-UID credential exposure | In-process agents share the gateway's identity | Separate execution identity, or short-lived credentials issued by a broker |
 | No centralized audit trail | Approval decisions and firewall denials live only in the host journal | Forward approval events and egress denials to a SIEM |
 | Startup lookup of the ClawHub registry | No documented setting turns it off; blocked only by the agent-UID DNS rule | Keep DNS closed for the agent; re-check after each upgrade |
