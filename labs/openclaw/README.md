@@ -13,7 +13,7 @@ Validated against OpenClaw 2026.11.4 on Ubuntu 24.04 with Node.js 24, November 1
 | [`config/openclaw-egress.nft`](config/openclaw-egress.nft) | UID-scoped nftables allowlist: loopback and the model API only | `/etc/nftables.d/` |
 | [`probe.sh`](probe.sh) | Automated probe suite, PASS/FAIL per control | Run in place |
 | [`eval/`](eval/README.md) | Denial-response evaluation: what the agent does after a human says no | Run in place |
-| [`ir-drill/`](ir-drill/README.md) | Incident-response drill: indirect prompt injection, detection to recovery (run 1 complete, run 2 pending) | Run in place |
+| [`ir-drill/`](ir-drill/README.md) | Incident-response drill: indirect prompt injection, detection to recovery (two runs complete) | Run in place |
 
 These are reference copies. Set the agent UID and your model provider's published address ranges in the nft file. The nft file blocks DNS for the agent's UID, so pin the model API host in root-owned `/etc/hosts` (for example `160.79.104.10 api.anthropic.com`). Every `ReadOnlyPaths` directory must exist before the unit starts. Create them empty, owned by the agent user, so the agent can't create them later.
 
