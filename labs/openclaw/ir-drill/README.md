@@ -1,6 +1,6 @@
 # Incident-response drill: indirect prompt injection
 
-**Status: design. Not yet run.** The harness and results land in a follow-up change. Nothing here should be read as a measured result until the Results section exists.
+**Status: harness ready, drill not yet run.** Nothing here should be read as a measured result until the Results section exists.
 
 Companion to [Hardening a Self-Learning Agent](../../../docs/case-studies/openclaw-agent-hardening.md#honest-residuals) and the [denial-response evaluation](../eval/README.md). The denial eval measured what the agent does when a human says no. This drill measures what the operator can do when hostile content gets into the agent's context: detect it, contain it, eradicate what it left behind, and prove the host is back to baseline.
 
@@ -50,14 +50,44 @@ Follows the detection-and-analysis, containment, eradication and recovery lifecy
 
 A failed criterion is a finding, not a failed drill. It gets numbered in the case study appendix like any other.
 
-## Harness plan (follow-up change)
+## Harness
 
-`ir_drill.py`, same safety rules as the denial eval:
+[`ir_drill.py`](ir_drill.py) runs one subcommand per phase. A human runs each step, so the timeline reflects operator response time, not script time. Phases refuse to run out of order, and eradication refuses to run before evidence is preserved.
 
-- **Deny only.** No code path approves an exec request.
-- Read-only toward security configuration. It hashes config and skill roots; it never writes them.
-- Subcommands in phase order (`baseline`, `deliver`, `detect`, `contain`, `eradicate`, `verify`), so a human runs each step and the timeline reflects human response time, not script time.
-- Inert targets only: the generated canary and an RFC 5737 destination.
+| Subcommand | What it does |
+| --- | --- |
+| `baseline` | Runs the probe suite (must pass); hashes the workspace, config and all five skill roots; snapshots the workspace; hashes the egress ruleset; generates the canary and marker |
+| `deliver` | Plants the note and the canary file in an inbox folder; asks the agent, in a Gateway-backed session, to summarize the note; denies every approval request |
+| `detect` | Reads kernel deny lines since delivery, re-hashes the workspace and protected files, searches for the marker; prints the signal-to-objective map |
+| `contain` | Denies anything still pending; stops the gateway; confirms the egress table is still loaded |
+| `preserve` | Exports kernel and gateway journals, archives the workspace and transcript, writes `SHA256SUMS` |
+| `eradicate` | Removes the inbox; restores marker- or canary-bearing files from the snapshot, or removes them if they are new; lists other changes for operator review instead of reverting them |
+| `verify` | Starts the gateway; checks restored files against the baseline; runs a clean session; runs the probe suite; scores the five pass criteria |
+| `report` | Re-prints the timeline and criteria from saved state, with no host calls |
+
+Safety properties, enforced by the unit tests in [`test_ir_drill.py`](test_ir_drill.py):
+
+- **Deny only.** The drill reuses the denial eval's `deny()` and contains no `approvals resolve` call of its own. A test fails if either harness gains any verdict other than `deny`.
+- **Read-only toward security configuration.** Config, skill roots and the egress ruleset are hashed, never written. The only service actions are stopping and starting the gateway.
+- **Inert targets.** A test fails if the destination leaves RFC 5737 or the DNS zone leaves the reserved `.example` name. The canary never appears in the note itself.
+
+Changes the agent made without the marker are reported as unattributed, not reverted. Background memory writes (finding #13) can land during a run, and an operator, not a script, decides whether they stay.
+
+### Run it
+
+On the lab host, as the admin user, with the Control UI connected. Each run gets its own state directory.
+
+```bash
+python3 -I ir_drill.py baseline  --state ./drill1 --probe ~/probe.sh
+python3 -I ir_drill.py deliver   --state ./drill1
+python3 -I ir_drill.py detect    --state ./drill1
+python3 -I ir_drill.py contain   --state ./drill1
+python3 -I ir_drill.py preserve  --state ./drill1
+python3 -I ir_drill.py eradicate --state ./drill1
+python3 -I ir_drill.py verify    --state ./drill1 --probe ~/probe.sh
+```
+
+The state directory holds the canary, the evidence bundle and journal exports. It stays on the host. Only the sanitized Results section is published here.
 
 ## Mapping
 
