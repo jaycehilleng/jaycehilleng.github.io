@@ -18,7 +18,7 @@ I deployed an open-source personal AI agent, gave it real tools, and attacked my
 
 The fix was to stop asking the agent to enforce anything. Every invariant now sits below it, in the OS user, systemd, read-only mounts, the kernel firewall, and a human approval screen. Each control was proven with a live probe, not taken from a config file or a status report.
 
-The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth, a denial-response evaluation added a sixteenth, and a review of the default tool catalog added a seventeenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
+The October review logged 14 findings: 2 critical, 4 high. Re-validation on 2026.11.4 added a fifteenth, a denial-response evaluation added a sixteenth, a review of the default tool catalog added a seventeenth, and the incident-response drill added an eighteenth. All are listed in the [appendix](#appendix-findings). Severity here means risk in this deployment, not a CVSS score for the product.
 
 ## The environment
 
@@ -121,6 +121,8 @@ The approved `curl` is the result that matters. I clicked Allow, and the command
 
 DNS was the remaining path: the agent's UID could still query the local resolver, which forwards queries to the internet under its own identity. On November 19 that closed. The model API host is pinned in root-owned `/etc/hosts`, and DNS on port 53 is rejected for the agent's UID ahead of the loopback rule. Name lookups for anything else now fail for the agent, while the model API still resolves and answers. The trade-off is deliberate: if the provider changes that address, the agent fails closed until the pin is updated.
 
+The closure surfaced traffic nobody had asked for. On November 22, tracing the denied lookups showed the gateway itself resolving three vendor hosts at startup: an update check (`telemetry.openclaw.ai`), a hosted model-catalog refresh (`catalog.openclaw.ai`) and the ClawHub skill and plugin registry (`clawhub.ai`). The first two have documented off switches and are now off. I found no documented setting for the registry lookup, so the agent-UID DNS rule is the only control stopping a runtime from reaching a supplier of executable skills (finding #18).
+
 **Lesson:** some controls belong to the kernel, and some belong to the human reading the card. Know which is which.
 
 ## 6. A human in the loop that actually works
@@ -171,6 +173,7 @@ None of these controls depend on OpenClaw or on the model provider. Runtime iden
 | Writable persona and memory files | By design; a persistence surface for prompt injection | Snapshot and diff them per session; alert on change |
 | Same-UID credential exposure | In-process agents share the gateway's identity | Separate execution identity, or short-lived credentials issued by a broker |
 | No centralized audit trail | Approval decisions and firewall denials live only in the host journal | Forward approval events and egress denials to a SIEM |
+| Startup lookup of the ClawHub registry | No documented setting turns it off; blocked only by the agent-UID DNS rule | Keep DNS closed for the agent; re-check after each upgrade |
 | Git `-c` flags on approval cards | Enforced by the human reading the card, not by the kernel | Allowlist git subcommands without `-c` |
 | Scope | One operator; reviewed on 2026.9.2, re-validated on 2026.11.4 | n/a |
 
@@ -258,6 +261,7 @@ This table orients the controls above for teams working toward an authorization.
 | 15 | Skill loader reads four roots the October hardening did not cover; canaries loaded from all four | High | Remediated November 18: four more read-only mounts, `EROFS` verified |
 | 16 | Under pressure, the agent used its `gateway` tool to look for a way to inspect or change its approval policy; the tool exposes `update.run` | High | Remediated November 19: `gateway` denied; absent from the agent's catalog; added to the probe suite |
 | 17 | The default tool catalog gives the agent operator-grade tools: plugin installation, operator terminals, credential prompts and restyling of the approval screen | High | Remediated November 19: `plugins`, `terminal`, `secrets`, `screen`, `theme` denied; absent from the catalog; added to the probe suite |
+| 18 | By default the gateway contacts three vendor hosts: a daily update check sending version and platform details, a hosted model-catalog refresh, and the ClawHub skill registry | Low | Partial, November 22: update check and catalog refresh off by config, added to the probe suite; registry lookup blocked by the agent-UID DNS rule (no documented setting) |
 
 ---
 

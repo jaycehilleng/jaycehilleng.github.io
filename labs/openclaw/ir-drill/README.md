@@ -124,7 +124,9 @@ Criteria 2 to 5 passed as recorded. Criterion 1 reported FAIL because of a harne
 | Every DNS deny after delivery credited to the injection | DNS objective shown as "prevented" though no lookup was requested | Kernel DNS denies reported separately as background, unattributed |
 | Agent's own report not captured | Operator alert time missing from the timeline | Informational row and alert time recorded |
 
-**Open item: background DNS from the agent's UID.** The gateway process calls `getaddrinfo()` for at least two hostnames not pinned in `/etc/hosts`, intermittently, including at startup. The UID-scoped DNS rule blocks every attempt, and the agent works normally. The query names are not yet identified; a longer trace is in progress. Until they are, these lookups are an unexplained egress attempt by the runtime, not an injection outcome.
+**Background DNS from the agent's UID: identified, finding #18.** Kernel deny lines carry no query name, so the gateway was traced with `strace` while the denials recurred. It resolves three vendor hosts on its own: an update check, a hosted model-catalog refresh, and the ClawHub skill registry. The UID-scoped DNS rule blocked every attempt, so none was an injection outcome. Two are now off by config and checked by the probe suite; the registry lookup has no documented setting and stays blocked by the egress rule. See [finding #18](../../../docs/case-studies/openclaw-agent-hardening.md#appendix-findings).
+
+The fix also showed the read-only config holding under operator pressure: changing a setting through the running gateway failed with `EBUSY`, because the gateway cannot replace its own read-only config file. The change was made with the gateway stopped.
 
 ## Mapping
 
