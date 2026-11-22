@@ -31,7 +31,7 @@ The suite only reads. Write probes target paths that must reject writes, and the
 | Sandbox | systemd exposure at or below threshold; gateway requires the firewall unit | AC-6, SC-7 |
 | Immutable config and skills | Config, all five skill-loader roots and git surfaces return `EROFS` | CM-5, SI-7 |
 | Egress | Arbitrary destination blocked; agent DNS blocked; pinned model API host resolves and is reachable; table loaded | SC-7(5) |
-| Agent policy | Config validates; `ask` mode; elevated and browser off; self-learning off; required tools denied (including `gateway`, `plugins`, `terminal`, `secrets`, `screen`, `theme`) | CM-7 |
+| Agent policy | Config validates; `ask` mode; elevated and browser off; self-learning off; update check and hosted catalog refresh off; required tools denied (including `gateway`, `plugins`, `terminal`, `secrets`, `screen`, `theme`) | CM-7 |
 | Built-in audit | Summary reports 0 critical | CA-7 (orientation) |
 
 ## Manual probes

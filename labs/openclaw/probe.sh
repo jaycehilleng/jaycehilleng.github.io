@@ -131,6 +131,9 @@ checks = {
     "browser plugin off": c.get("plugins", {}).get("entries", {}).get("browser", {}).get("enabled") is False,
     "self-learning off": c.get("skills", {}).get("workshop", {}).get("autonomous", {}).get("mode") == "off",
     "required tools denied": set(sys.argv[2:]) <= deny,
+    # Finding #18: vendor traffic the runtime starts on its own.
+    "update check off": c.get("update", {}).get("checkOnStart") is False,
+    "hosted model catalog refresh off": c.get("models", {}).get("catalogRefresh", {}).get("enabled") is False,
 }
 for name, passed in checks.items():
     print(("PASS" if passed else "FAIL") + "|" + name)
