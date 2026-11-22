@@ -41,3 +41,6 @@ jobs:
         PYTHONPATH: .
       run: |
         python -m pytest src/mcp_proxy/test_integration.py -v
+    - name: Run OpenClaw IR Drill Harness Unit Tests
+      run: |
+        python -m pytest labs/openclaw/ir-drill/test_ir_drill.py -v
