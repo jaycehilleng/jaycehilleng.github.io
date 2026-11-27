@@ -2,7 +2,7 @@
 
 **Author:** Jayce Hill | Principal AI Security Architect
 **Published:** November 2026
-**Scope:** One operator's deployment of OpenClaw 2026.9.2, reviewed October 4 to November 2, 2026, then upgraded to 2026.11.4 and re-probed on November 18, 2026. Everything below was observed in this configuration. Nothing here is a vulnerability claim against OpenClaw.
+**Scope:** One operator's deployment of OpenClaw 2026.9.2, reviewed October 4 to November 2, 2026, then upgraded to 2026.11.4 and re-probed on November 18, 2026. Everything below was observed in this configuration, except the [upstream table for 2026.11.5 to 2026.11.10](#upstream-since-this-review-2026115-to-20261110), which is taken from the vendor's release notes and not yet probed. Nothing here is a vulnerability claim against OpenClaw.
 
 ---
 
@@ -221,6 +221,28 @@ The fix was four more read-only mounts. Retried from inside the service's mount 
 One behavior didn't change. After I denied a few commands in a row, the agent concluded that something in the approval path was "rejecting everything" and suggested I look into why. It treated a human "no" as a malfunction. That is the social failure mode from section 6, unchanged across releases.
 
 The vendor chose "apply now, undo later" for a single-operator assistant. That's a defensible product decision. For a deployment holding credentials, I chose off, enforced below the agent with read-only mounts on every skill root. The upgrade path preserves that choice, and when a stale setting can't be read, 11.4 stops rather than guessing.
+
+### Upstream since this review: 2026.11.5 to 2026.11.10
+
+OpenClaw shipped six releases after the November 18 re-validation. On November 26, 2026, I read the [published release notes](https://docs.openclaw.ai/releases) for 2026.11.5 through 2026.11.10, the latest at the time, and pulled out the changes that bear on the controls above. None of these rows has been probed on this deployment. "Upstream reports" is what the vendor's notes say; the last column is what I will check after upgrading, using the runbook above.
+
+| Area | Upstream reports | Bears on | Probe after upgrade |
+| --- | --- | --- | --- |
+| New default-on tool | 11.10 ships Deep Research as a bundled plugin, enabled by default, with a `deep_research` tool the agent can call. The notes say it makes no network requests until used; `plugins.entries.deep-research.enabled: false` turns it off | Least functionality (section 4): this deployment denies tools by name; whether the live deny list names `deep_research` is not yet verified | `deep_research` absent from the agent's catalog; added to the required denies |
+| Agent-installed templates | 11.10 lets agents review and install published ClawHub Templates through the setup helper, without shell access, keeping plan and dependency consent | Findings #17 and #18: agent-reachable installation and the ClawHub registry | Identify the tool that exposes the setup helper and deny it; `clawhub.ai` still fails to resolve for the agent |
+| Agent config repair | 11.10 "allows agents to repair broken configuration safely when the setup helper cannot run" | Read-only `openclaw.json` (section 3) | A config write as the agent still returns `EROFS` |
+| Automatic updates | 11.10 adds update schedules for managed Gateways with automatic updates on; the default is hourly | The Day 2 runbook assumes the operator, not a timer, decides when to upgrade | Automatic updates off; version unchanged after an hour |
+| Update and install reports | 11.5 adds update-outcome reports and an installation-count report, which may be sent by default where the update service supports them. Turning off automatic update checks also turns off the outcome reports; telemetry off or `DO_NOT_TRACK=1` stops the count | Finding #18: unprompted vendor contact | Update check still off; no new vendor hosts among the agent's denied lookups at startup |
+| Shell startup variables | 11.9 rejects `BASH_ENV` and `ENV` assignments passed through `env -S` or nested `env --split-string` | Exec approvals: the 11.4 row above, where an environment assignment raises a card | Manual probe: an `env -S` command that sets `BASH_ENV` is refused |
+| Standing approvals | 11.5 approval cards show the duration of a time-limited **Always allow** grant, and standing grants stay visible and revocable in the Control UI | Section 6: a standing grant is the button a fatigued operator reaches for | No standing grants exist; the allowlist is still six entries |
+| Inherited access | 11.10 stops code-mode and plugin subagents inheriting elevated access from their parent, and enforces session permission modes on every Gateway tool call across runtimes | Elevated mode off; human approval | No change expected; `rm -rf` still returns `user-denied` |
+| Self-learning | 11.5 adds a daily rewrite that shortens one oversized learned skill per agent, in auto mode only, and sends the skill text to the model provider. With skill watching on, folders are watched for edits, with a safety scan every 30 minutes instead of a rescan every minute | Finding #2: self-learning off, every skill root read-only | Self-learning still off; every root in the 11.10 loader documentation returns `EROFS` |
+| `security audit` | 11.5 stops the audit skipping nested `SKILL.md` symlink escapes when the skills folder is itself a symlink, and fixes it missing some allowed plugin tools. None of the 11.5 to 11.10 notes mention a check for a gateway user with passwordless sudo | Finding #1 | Summary still 0 critical; record whether it now flags passwordless sudo |
+| Node.js | 11.5 recommends Node 24.22.1 or later on 24.x, or 26.12.1 or later, for their security fixes. 11.4 required 24.16 or later | Runtime baseline | Installed Node meets the recommendation before the upgrade |
+
+Two rows change the upgrade process, not just the checklist. A deny list covers only the tools that existed when it was written, and an hourly update timer would skip every step of the runbook above.
+
+**Lesson:** diff the agent's whole tool catalog on every upgrade, not just the denies you already have.
 
 ## Control mapping (NIST SP 800-53 Rev. 5)
 
